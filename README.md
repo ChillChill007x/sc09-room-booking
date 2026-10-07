@@ -18,6 +18,7 @@
 | 4 | พัชรพล กองแก้ว (Phatcharaphon) | 6733804155 | 04 | `phatcharaphon_6733804155_04` | วงจรสถานะการจอง (อนุมัติ ปฏิเสธ ยกเลิก check-in), State Pattern, ประวัติการเปลี่ยนสถานะ, Scheduler ปิดการจองอัตโนมัติ, หน้าคิวอนุมัติและรายละเอียดการจอง |
 | 5 | ศุภกิตติ์ ฟันเฟือย (Suphakit) | 6733804278 | 03 | `suphakit_6733804278_03` | โมดูลแจ้งเตือนและสถิติ, Observer Pattern, Dockerfile และ docker-compose, CI/CD ด้วย GitHub Actions, Deployment, layout กลางและหน้า dashboard |
 
+
 ## Tech Stack
 
 | ส่วน | เทคโนโลยี |
@@ -190,6 +191,7 @@ Environment variable ของ backend
 | `DB_USERNAME` | `postgres` | ชื่อผู้ใช้ฐานข้อมูล |
 | `DB_PASSWORD` | `postgres` | รหัสผ่านฐานข้อมูล |
 | `JPA_DDL_AUTO` | `validate` | ให้ Flyway เป็นผู้สร้างตาราง |
+
 | `JWT_SECRET` | ค่าตัวอย่างสำหรับเครื่อง dev | คีย์สำหรับเซ็น JWT ยาวอย่างน้อย 32 ตัวอักษร |
 | `JWT_EXPIRATION_MINUTES` | `480` | อายุ token (นาที) |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | URL ของ frontend คั่นด้วย `,` |
@@ -199,6 +201,8 @@ Environment variable ของ frontend (`code/frontend/.env.local`)
 | ตัวแปร | ค่าเริ่มต้น | คำอธิบาย |
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | URL ของ backend |
+| `JWT_SECRET` | ไม่มี | คีย์สำหรับเซ็น JWT |
+
 
 ## How to Run
 
@@ -228,6 +232,7 @@ docker compose up --build
 | อาจารย์ | `lecturer@kkumail.com` | `Password123!` |
 | เจ้าหน้าที่ | `staff@kkumail.com` | `Password123!` |
 | ผู้ดูแลระบบ | `admin@kkumail.com` | `Password123!` |
+
 
 ## API Documentation
 
