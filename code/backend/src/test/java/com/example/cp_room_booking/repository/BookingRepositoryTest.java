@@ -41,7 +41,7 @@ class BookingRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        room = roomRepository.findAll(keyword("SC09-2201")).get(0);
+        room = roomRepository.findAll(keyword("SC09-9226")).get(0);
         student = userRepository.findByEmail("student@kkumail.com").orElseThrow();
         existing = bookingRepository.save(booking(TEN, NOON, BookingStatus.APPROVED));
     }

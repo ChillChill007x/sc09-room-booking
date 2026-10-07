@@ -32,32 +32,32 @@ SELECT u.id, r.id,
        CAST(CURRENT_DATE AS TIMESTAMP) + INTERVAL '1' DAY + INTERVAL '9' HOUR,
        CAST(CURRENT_DATE AS TIMESTAMP) + INTERVAL '1' DAY + INTERVAL '11' HOUR,
        'ติวสอบกลางภาควิชา CP353002', 25, 'PENDING'
-FROM users u, rooms r WHERE u.email = 'student@kkumail.com' AND r.code = 'SC09-2203';
+FROM users u, rooms r WHERE u.email = 'student@kkumail.com' AND r.code = 'SC09-9226';
 
 INSERT INTO bookings (user_id, room_id, start_time, end_time, purpose, attendees, status)
 SELECT u.id, r.id,
        CAST(CURRENT_DATE AS TIMESTAMP) + INTERVAL '1' DAY + INTERVAL '13' HOUR,
        CAST(CURRENT_DATE AS TIMESTAMP) + INTERVAL '1' DAY + INTERVAL '16' HOUR,
        'สอนชดเชยวิชา Software Design', 60, 'APPROVED'
-FROM users u, rooms r WHERE u.email = 'lecturer@kkumail.com' AND r.code = 'SC09-1102';
+FROM users u, rooms r WHERE u.email = 'lecturer@kkumail.com' AND r.code = 'SC09-CP9127';
 
 INSERT INTO bookings (user_id, room_id, start_time, end_time, purpose, attendees, status)
 SELECT u.id, r.id,
        CAST(CURRENT_DATE AS TIMESTAMP) + INTERVAL '2' DAY + INTERVAL '9' HOUR,
        CAST(CURRENT_DATE AS TIMESTAMP) + INTERVAL '2' DAY + INTERVAL '12' HOUR,
        'ปฐมนิเทศนักศึกษาฝึกงาน', 150, 'APPROVED'
-FROM users u, rooms r WHERE u.email = 'staff@kkumail.com' AND r.code = 'SC09-1101';
+FROM users u, rooms r WHERE u.email = 'staff@kkumail.com' AND r.code = 'SC09-CP9127';
 
 INSERT INTO bookings (user_id, room_id, start_time, end_time, purpose, attendees, status)
 SELECT u.id, r.id,
        CAST(CURRENT_DATE AS TIMESTAMP) - INTERVAL '1' DAY + INTERVAL '10' HOUR,
        CAST(CURRENT_DATE AS TIMESTAMP) - INTERVAL '1' DAY + INTERVAL '12' HOUR,
        'ประชุมโปรเจกต์กลุ่ม', 5, 'COMPLETED'
-FROM users u, rooms r WHERE u.email = 'student2@kkumail.com' AND r.code = 'SC09-1103';
+FROM users u, rooms r WHERE u.email = 'student2@kkumail.com' AND r.code = 'SC09-9231';
 
 INSERT INTO bookings (user_id, room_id, start_time, end_time, purpose, attendees, status)
 SELECT u.id, r.id,
        CAST(CURRENT_DATE AS TIMESTAMP) - INTERVAL '2' DAY + INTERVAL '14' HOUR,
        CAST(CURRENT_DATE AS TIMESTAMP) - INTERVAL '2' DAY + INTERVAL '15' HOUR,
        'อ่านหนังสือกลุ่ม', 4, 'NO_SHOW'
-FROM users u, rooms r WHERE u.email = 'student@kkumail.com' AND r.code = 'SC09-4402';
+FROM users u, rooms r WHERE u.email = 'student@kkumail.com' AND r.code = 'SC09-9428';
