@@ -13,10 +13,11 @@
 | ลำดับ | ชื่อ-นามสกุล | รหัสนักศึกษา | Section | Branch | หน้าที่รับผิดชอบ |
 | --- | --- | --- | --- | --- | --- |
 | 1 | ดรัณภพ สุริเตอร์ | 6733804024 | 03 | `darunphop_6733804024_03` | โมดูลผู้ใช้และการยืนยันตัวตน (User, UserProfile, JWT), ฐานราก backend (Global Exception Handler, Security, Swagger), Strategy Pattern สำหรับกฎการจองตาม role, หน้า login, register, profile, จัดการผู้ใช้ |
-| 2 | TODO: ชื่อ-นามสกุล (Kritsada) | 6733803882 | 03 | `kritsada_6733803882_03` | โมดูลห้องและอุปกรณ์ (CRUD Resource ที่ 1), Pagination, Sorting และตัวกรอง, ความสัมพันธ์ Many-to-Many ห้องกับอุปกรณ์, ค้นหาห้องว่าง, ช่วงปิดห้อง, หน้ารายการห้องและจัดการห้อง |
-| 3 | TODO: ชื่อ-นามสกุล (Anatta) | 6733804294 | 03 | `anatta_6733804294_03` | โมดูลการจอง (CRUD Resource ที่ 2), Chain of Responsibility สำหรับตรวจกฎการจอง, ตรวจเวลาชนกัน, หน้าฟอร์มจอง การจองของฉัน และตารางเวลาห้อง |
-| 4 | TODO: ชื่อ-นามสกุล (Phatcharaphon) | 6733804155 | 04 | `phatcharaphon_6733804155_04` | วงจรสถานะการจอง (อนุมัติ ปฏิเสธ ยกเลิก check-in), State Pattern, ประวัติการเปลี่ยนสถานะ, Scheduler ปิดการจองอัตโนมัติ, หน้าคิวอนุมัติและรายละเอียดการจอง |
-| 5 | TODO: ชื่อ-นามสกุล (Suphakit) | 6733804278 | 03 | `suphakit_6733804278_03` | โมดูลแจ้งเตือนและสถิติ, Observer Pattern, Dockerfile และ docker-compose, CI/CD ด้วย GitHub Actions, Deployment, layout กลางและหน้า dashboard |
+| 2 | กฤษฎา นามมนต์เทียน | 6733803882 | 03 | `kritsada_6733803882_03` | โมดูลห้องและอุปกรณ์ (CRUD Resource ที่ 1), Pagination, Sorting และตัวกรอง, ความสัมพันธ์ Many-to-Many ห้องกับอุปกรณ์, ค้นหาห้องว่าง, ช่วงปิดห้อง, หน้ารายการห้องและจัดการห้อง |
+| 3 | อนัตตา โยคาพจร | 6733804294 | 03 | `anatta_6733804294_03` | โมดูลการจอง (CRUD Resource ที่ 2), Chain of Responsibility สำหรับตรวจกฎการจอง, ตรวจเวลาชนกัน, หน้าฟอร์มจอง การจองของฉัน และตารางเวลาห้อง |
+| 4 | พัชรพล กองแก้ว (Phatcharaphon) | 6733804155 | 04 | `phatcharaphon_6733804155_04` | วงจรสถานะการจอง (อนุมัติ ปฏิเสธ ยกเลิก check-in), State Pattern, ประวัติการเปลี่ยนสถานะ, Scheduler ปิดการจองอัตโนมัติ, หน้าคิวอนุมัติและรายละเอียดการจอง |
+| 5 | ศุภกิตติ์ ฟันเฟือย (Suphakit) | 6733804278 | 03 | `suphakit_6733804278_03` | โมดูลแจ้งเตือนและสถิติ, Observer Pattern, Dockerfile และ docker-compose, CI/CD ด้วย GitHub Actions, Deployment, layout กลางและหน้า dashboard |
+
 
 ## Tech Stack
 
@@ -190,7 +191,18 @@ Environment variable ของ backend
 | `DB_USERNAME` | `postgres` | ชื่อผู้ใช้ฐานข้อมูล |
 | `DB_PASSWORD` | `postgres` | รหัสผ่านฐานข้อมูล |
 | `JPA_DDL_AUTO` | `validate` | ให้ Flyway เป็นผู้สร้างตาราง |
+
+| `JWT_SECRET` | ค่าตัวอย่างสำหรับเครื่อง dev | คีย์สำหรับเซ็น JWT ยาวอย่างน้อย 32 ตัวอักษร |
+| `JWT_EXPIRATION_MINUTES` | `480` | อายุ token (นาที) |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | URL ของ frontend คั่นด้วย `,` |
+
+Environment variable ของ frontend (`code/frontend/.env.local`)
+
+| ตัวแปร | ค่าเริ่มต้น | คำอธิบาย |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | URL ของ backend |
 | `JWT_SECRET` | ไม่มี | คีย์สำหรับเซ็น JWT |
+
 
 ## How to Run
 
@@ -216,9 +228,11 @@ docker compose up --build
 
 | Role | Email | Password |
 | --- | --- | --- |
-| นักศึกษา | TODO | TODO |
-| อาจารย์ | TODO | TODO |
-| เจ้าหน้าที่ | TODO | TODO |
+| นักศึกษา | `student@kkumail.com`, `student2@kkumail.com` | `Password123!` |
+| อาจารย์ | `lecturer@kkumail.com` | `Password123!` |
+| เจ้าหน้าที่ | `staff@kkumail.com` | `Password123!` |
+| ผู้ดูแลระบบ | `admin@kkumail.com` | `Password123!` |
+
 
 ## API Documentation
 
@@ -328,3 +342,4 @@ sc09-room-booking/
 - `ชื่อ_รหัสนักศึกษา_section`: branch ส่วนตัวของแต่ละคน
 - ทุกการรวมงานผ่าน Pull Request และมี Reviewer อย่างน้อย 1 คน
 - Commit message: `<type>: <สิ่งที่ทำ>` โดย type คือ `feat`, `fix`, `refactor`, `test`, `docs`
+
