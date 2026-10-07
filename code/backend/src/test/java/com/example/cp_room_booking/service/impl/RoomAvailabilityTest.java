@@ -2,6 +2,7 @@ package com.example.cp_room_booking.service.impl;
 
 import com.example.cp_room_booking.domain.entity.Room;
 import com.example.cp_room_booking.domain.entity.RoomClosure;
+import com.example.cp_room_booking.domain.enums.RoomStatus;
 import com.example.cp_room_booking.dto.response.RoomResponse;
 import com.example.cp_room_booking.mapper.RoomMapper;
 import com.example.cp_room_booking.mapper.RoomTypeMapper;
@@ -50,37 +51,47 @@ class RoomAvailabilityTest {
 
     @Test
     void findAvailable_excludesBookedRoomsAndMaintenance() {
-        Long booked = idOf("SC09-2201");
+        Long booked = idOf("SC09-9226");
+
+        Room maintenance = roomRepository.findById(idOf("SC09-9421")).orElseThrow();
+        maintenance.setStatus(RoomStatus.MAINTENANCE);
+        roomRepository.saveAndFlush(maintenance);
+
         when(bookingQueryService.findBookedRoomIds(any(), any())).thenReturn(Set.of(booked));
 
         List<RoomResponse> rooms = roomService.findAvailable(START, END, 40, null);
 
         assertThat(rooms).extracting(RoomResponse::code)
-                .contains("SC09-2202", "SC09-1101")
-                .doesNotContain("SC09-2201", "SC09-4403", "SC09-1103");
+                .contains("SC09-9227", "SC09-CP9127")
+                .doesNotContain("SC09-9226", "SC09-9421");
     }
 
     @Test
     void findAvailable_excludesClosedRooms() {
-        Room room = roomRepository.findById(idOf("SC09-3303")).orElseThrow();
+        Room room = roomRepository.findById(idOf("SC09-9231")).orElseThrow();
         roomClosureRepository.save(RoomClosure.builder()
                 .room(room).startTime(START.minusHours(1)).endTime(START.plusMinutes(30)).reason("ซ่อมแอร์").build());
         when(bookingQueryService.findBookedRoomIds(any(), any())).thenReturn(Set.of());
 
         List<RoomResponse> rooms = roomService.findAvailable(START, END, null, null);
 
-        assertThat(rooms).extracting(RoomResponse::code).doesNotContain("SC09-3303").contains("SC09-4401");
+        assertThat(rooms).extracting(RoomResponse::code)
+                .doesNotContain("SC09-9231")
+                .contains("SC09-9428");
     }
 
     @Test
     void findAvailable_requiresAllSelectedEquipment() {
         when(bookingQueryService.findBookedRoomIds(any(), any())).thenReturn(Set.of());
-        Room lab = roomRepository.findDetailById(idOf("SC09-2201")).orElseThrow();
-        List<Long> equipmentIds = lab.getEquipment().stream().map(link -> link.getEquipment().getId()).toList();
+        Room roomWithEquipment = roomRepository.findDetailById(idOf("SC09-CP9127")).orElseThrow();
+        List<Long> equipmentIds = roomWithEquipment.getEquipment().stream()
+                .map(link -> link.getEquipment().getId())
+                .toList();
 
         List<RoomResponse> rooms = roomService.findAvailable(START, END, null, equipmentIds);
 
-        assertThat(rooms).extracting(RoomResponse::code).containsExactlyInAnyOrder("SC09-2201", "SC09-2202");
+        assertThat(rooms).extracting(RoomResponse::code)
+                .containsExactly("SC09-CP9127");
     }
 
     private Long idOf(String code) {
