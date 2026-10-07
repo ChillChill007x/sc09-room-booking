@@ -33,7 +33,7 @@ class RoomClosureRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        Room room = roomRepository.findAll(keyword("SC09-1102")).get(0);
+        Room room = roomRepository.findAll(keyword("SC09-9226")).get(0);
         roomId = room.getId();
         roomClosureRepository.save(RoomClosure.builder().room(room).startTime(START).endTime(END).reason("ซ่อม").build());
     }
