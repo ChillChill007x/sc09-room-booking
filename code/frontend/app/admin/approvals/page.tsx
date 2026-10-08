@@ -29,7 +29,14 @@ function ApprovalQueue() {
     () =>
       bookingApi
         .list({ status: "PENDING", page, size: 10, sort: "startTime,asc" })
-        .then(setData)
+        .then((result) => {
+          // อนุมัติ/ปฏิเสธรายการสุดท้ายของหน้าสุดท้ายแล้วหน้านี้จะว่าง ให้ถอยไปหน้าสุดท้ายที่ยังมีข้อมูล (useEffect จะโหลดให้ใหม่)
+          if (result.content.length === 0 && page > 0) {
+            setPage(Math.max(result.totalPages - 1, 0));
+            return;
+          }
+          setData(result);
+        })
         .catch((err) => setMessage({ tone: "error", text: errorMessage(err) })),
     [page],
   );
