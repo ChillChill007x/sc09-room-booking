@@ -24,4 +24,4 @@ cd code/backend
 
 ## Postman
 
-import `postman/sc09-room-booking.postman_collection.json` แล้วรัน request "Login (staff)" หรือ "Login (student)" ก่อน token จะถูกเก็บในตัวแปร `token` ให้ request อื่นใช้อัตโนมัติ
+import `postman/sc09-room-booking.postman_collection.json` แล้วกด **Run collection** ให้รันตามลำดับ แต่ละ use case จะ login ด้วย role ที่ต้องใช้เอง วันที่จองคำนวณอัตโนมัติเป็นอีก 2 วันข้างหน้า และขั้นสุดท้าย (Cleanup) จะยกเลิกการจองที่สร้างไว้ จึงรันซ้ำได้ ถ้าทดสอบกับเว็บจริง ให้เปลี่ยนตัวแปร `baseUrl` เป็น URL ของ backend
