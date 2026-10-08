@@ -64,7 +64,10 @@ class NotificationFlowIntegrationTest {
         User student = userRepository.findByEmail("student2@kkumail.com").orElseThrow();
         User staff = userRepository.findByEmail("staff@kkumail.com").orElseThrow();
         User admin = userRepository.findByEmail("admin@kkumail.com").orElseThrow();
-        Long roomId = roomRepository.findAll(keyword("SC09-2202")).get(0).getId();
+        Long roomId = roomRepository.findAll(keyword("SC09-9231")).stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("ไม่พบห้อง SC09-9231 สำหรับ integration test"))
+                .getId();
         LocalDateTime start = LocalDate.now(clock).plusDays(2).atTime(15, 0);
 
         BookingResponse created = bookingService.create(UserPrincipal.from(student),
