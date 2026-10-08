@@ -2,6 +2,7 @@ package com.example.cp_room_booking.domain.entity;
 
 import com.example.cp_room_booking.common.BaseEntity;
 import com.example.cp_room_booking.domain.enums.BookingStatus;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +13,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +23,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "bookings")
@@ -57,6 +62,31 @@ public class Booking extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private BookingStatus status;
+
+    /**
+     * history ถูกบันทึกพร้อม booking ผ่าน cascade PERSIST แต่ไม่ cascade การลบ
+     * การลบ booking ให้ฐานข้อมูลลบ history ตาม (ON DELETE CASCADE)
+     */
+    @Builder.Default
+    @OrderBy("changedAt ASC, id ASC")
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.PERSIST)
+    private List<BookingStatusHistory> history = new ArrayList<>();
+
+    /**
+     * เปลี่ยนสถานะพร้อมบันทึกประวัติทุกครั้ง changedBy เป็น null ได้เมื่อระบบเปลี่ยนเอง (scheduler)
+     */
+    public void changeStatus(BookingStatus newStatus, User changedBy, String note, LocalDateTime changedAt) {
+        BookingStatus previous = this.status;
+        this.status = newStatus;
+        history.add(BookingStatusHistory.builder()
+                .booking(this)
+                .fromStatus(previous)
+                .toStatus(newStatus)
+                .changedBy(changedBy)
+                .note(note)
+                .changedAt(changedAt)
+                .build());
+    }
 
     public boolean isOwnedBy(Long userId) {
         return user.getId().equals(userId);
