@@ -21,11 +21,11 @@ CREATE INDEX idx_notifications_booking ON notifications (booking_id);
 
 -- แจ้งเตือนตัวอย่างของการจองใน V3
 INSERT INTO notifications (user_id, booking_id, type, message, is_read)
-SELECT u.id, b.id, 'BOOKING_CREATED', 'มีคำขอจองห้อง SC09-2203 รออนุมัติ', FALSE
+SELECT u.id, b.id, 'BOOKING_CREATED', 'มีคำขอจองห้อง SC09-9226 รออนุมัติ', FALSE
 FROM users u, bookings b, rooms r
-WHERE u.email = 'staff@kkumail.com' AND b.room_id = r.id AND r.code = 'SC09-2203' AND b.status = 'PENDING';
+WHERE u.email = 'staff@kkumail.com' AND b.room_id = r.id AND r.code = 'SC09-9226' AND b.status = 'PENDING';
 
 INSERT INTO notifications (user_id, booking_id, type, message, is_read)
-SELECT b.user_id, b.id, 'BOOKING_NO_SHOW', 'การจองห้อง SC09-4402 ถูกบันทึกว่าไม่มาใช้ห้อง', FALSE
+SELECT b.user_id, b.id, 'BOOKING_NO_SHOW', 'การจองห้อง SC09-9428 ถูกบันทึกว่าไม่มาใช้ห้อง', FALSE
 FROM bookings b, rooms r
-WHERE b.room_id = r.id AND r.code = 'SC09-4402' AND b.status = 'NO_SHOW';
+WHERE b.room_id = r.id AND r.code = 'SC09-9428' AND b.status = 'NO_SHOW';
