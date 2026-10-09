@@ -222,17 +222,19 @@ docker compose up --build
 
 บัญชีทดสอบจาก seed data
 
-| Role | Email | Password |
-| --- | --- | --- |
-| นักศึกษา | `student@kkumail.com`, `student2@kkumail.com` | `Password123!` |
-| อาจารย์ | `lecturer@kkumail.com` | `Password123!` |
-| เจ้าหน้าที่ | `staff@kkumail.com` | `Password123!` |
-| ผู้ดูแลระบบ | `admin@kkumail.com` | `Password123!` |
+| Role | Email |
+| --- | --- |
+| นักศึกษา | `student@kkumail.com`, `student2@kkumail.com` |
+| อาจารย์ | `lecturer@kkumail.com` |
+| เจ้าหน้าที่ | `staff@kkumail.com` |
+| ผู้ดูแลระบบ | `admin@kkumail.com` |
+
+รหัสผ่านสำหรับรันในเครื่องอยู่ใน comment ของ `code/backend/src/main/resources/db/migration/V1__users.sql` ส่วนบนเว็บ production เปลี่ยนรหัสผ่านแล้ว ขอรหัสสำหรับทดสอบได้จากทีมผู้พัฒนา
 
 ## API Documentation
 
 - Swagger UI (local): http://localhost:8080/swagger-ui.html
-- Swagger UI (production): TODO
+- Swagger UI (production): https://sc09-room-booking.onrender.com/swagger-ui.html
 - Base path: `/api/v1`
 
 | Resource | Endpoint หลัก | ผู้รับผิดชอบ |
@@ -277,11 +279,13 @@ cd code/backend
 
 | ส่วน | URL |
 | --- | --- |
-| Frontend | TODO |
-| Backend API | TODO |
-| Swagger UI | TODO |
+| Frontend | https://sc09-room-booking.vercel.app |
+| Backend API | https://sc09-room-booking.onrender.com/api/v1 |
+| Swagger UI | https://sc09-room-booking.onrender.com/swagger-ui.html |
 
-CI/CD ใช้ GitHub Actions: ทุก Pull Request จะถูก build และ test อัตโนมัติ และเมื่อ merge เข้า `main` จะ deploy อัตโนมัติ
+Backend ใช้ Render แผนฟรี ถ้าไม่มีคนใช้ 15 นาทีจะหลับ request แรกหลังจากนั้นอาจช้าประมาณ 1 นาที
+
+CI/CD ใช้ GitHub Actions: ทุก Pull Request จะถูก build และ test อัตโนมัติ และเมื่อ merge เข้า `develop` จะ deploy อัตโนมัติ
 
 ## Project Structure
 

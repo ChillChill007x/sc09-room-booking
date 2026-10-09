@@ -1,6 +1,6 @@
 name: Deploy
 
-# deploy อัตโนมัติเมื่อ merge เข้า main ต้องผ่าน CI ก่อน
+# deploy อัตโนมัติเมื่อ merge เข้า develop (ตามที่อาจารย์กำหนด) ต้องผ่าน CI ก่อน
 # Secrets ที่ต้องตั้งใน Settings > Secrets and variables > Actions:
 #   RENDER_DEPLOY_HOOK_URL  : Deploy Hook ของ backend บน Render
 #   VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID : ของ frontend บน Vercel
@@ -8,7 +8,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
   workflow_dispatch:
 
 concurrency:
