@@ -27,6 +27,11 @@ function UserManagement() {
       userApi
         .list({ page, size: 10, sort: "id,asc", role })
         .then((result) => {
+          // เปลี่ยนบทบาทหรือปิดใช้งานคนสุดท้ายของหน้าสุดท้ายแล้วหน้านี้จะว่าง ให้ถอยไปหน้าสุดท้ายที่ยังมีข้อมูล
+          if (result.content.length === 0 && page > 0) {
+            setPage(Math.max(result.totalPages - 1, 0));
+            return;
+          }
           setData(result);
           setError(null);
         })
@@ -72,6 +77,7 @@ function UserManagement() {
       {error && <Alert tone="error">{error}</Alert>}
       {editing && (
         <EditUserForm
+          key={editing.id}
           user={editing}
           onClose={() => setEditing(null)}
           onSaved={async () => {
