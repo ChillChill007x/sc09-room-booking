@@ -12,4 +12,9 @@ public interface BookingQueryService {
     Set<Long> findBookedRoomIds(LocalDateTime start, LocalDateTime end);
 
     boolean hasFutureBookings(Long roomId);
+
+    /**
+     * มีการจองที่ยังใช้งาน (รออนุมัติ อนุมัติแล้ว หรือกำลังใช้ห้อง) ทับช่วงเวลานี้หรือไม่ ใช้ตอนสร้างช่วงปิดห้อง
+     */
+    boolean hasActiveBookingOverlap(Long roomId, LocalDateTime start, LocalDateTime end);
 }

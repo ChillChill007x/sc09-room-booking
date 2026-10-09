@@ -18,6 +18,21 @@ import java.util.Set;
 
 public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpecificationExecutor<Booking> {
 
+    /*
+     * ล็อกแถว (SELECT ... FOR UPDATE) กันคำขอพร้อมกันผ่านการตรวจกฎทั้งคู่ เช่น จองห้องเดียวกันเวลาเดียวกัน
+     * คำขอที่มาทีหลังจะรอจนคำขอแรก commit แล้วจึงตรวจเวลาชนจากข้อมูลล่าสุด
+     * ลำดับการล็อกต้องเหมือนกันทุกที่: ผู้ใช้ -> ห้อง -> การจอง เพื่อไม่ให้เกิด deadlock
+     * ใช้ native query เลือกเฉพาะ id จึงไม่ join ตารางอื่น (PostgreSQL ห้าม FOR UPDATE บน outer join)
+     */
+    @Query(value = "SELECT id FROM users WHERE id = :userId FOR UPDATE", nativeQuery = true)
+    Optional<Long> lockUser(Long userId);
+
+    @Query(value = "SELECT id FROM rooms WHERE id = :roomId FOR UPDATE", nativeQuery = true)
+    Optional<Long> lockRoom(Long roomId);
+
+    @Query(value = "SELECT id FROM bookings WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Long> lockBooking(Long id);
+
     /**
      * ตรวจเวลาชน: ห้องเดียวกัน สถานะยังใช้งาน และ start < :end AND end > :start
      * การจองที่เวลาต่อกันพอดี (จบ 10:00 เริ่ม 10:00) ไม่ถือว่าชน
@@ -66,4 +81,16 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
             """)
     List<Booking> findRoomSchedule(Long roomId, LocalDateTime from, LocalDateTime to,
                                    Collection<BookingStatus> statuses);
+
+    /**
+     * การจองทุกห้องในช่วงเวลา ใช้กับปฏิทินรายเดือนและตารางรวมทุกห้องรายวัน
+     */
+    @Query("""
+            select b from Booking b join fetch b.room
+            where b.status in :statuses
+              and b.startTime < :to
+              and b.endTime > :from
+            order by b.startTime asc
+            """)
+    List<Booking> findAllInRange(LocalDateTime from, LocalDateTime to, Collection<BookingStatus> statuses);
 }

@@ -65,3 +65,26 @@ export const bookingApi = {
   roomSchedule: (roomId: number, date: string) =>
     http.get<BookingSlot[]>(`/api/v1/rooms/${roomId}/bookings`, { date }),
 };
+
+/** จำนวนการจองของวันหนึ่ง สำหรับปฏิทินรายเดือน */
+export interface CalendarDay {
+  date: string;
+  bookings: number;
+}
+
+/** การจองหนึ่งรายการในตารางรวมทุกห้อง ไม่มีข้อมูลผู้จอง */
+export interface ScheduleSlot {
+  bookingId: number;
+  roomId: number;
+  roomCode: string;
+  startTime: string;
+  endTime: string;
+  status: BookingStatus;
+}
+
+export const scheduleApi = {
+  /** month รูปแบบ yyyy-MM คืนเฉพาะวันที่มีการจอง */
+  month: (month: string) => http.get<CalendarDay[]>("/api/v1/schedule/month", { month }),
+  /** date รูปแบบ yyyy-MM-dd */
+  day: (date: string) => http.get<ScheduleSlot[]>("/api/v1/schedule/day", { date }),
+};

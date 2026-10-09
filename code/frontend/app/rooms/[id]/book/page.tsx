@@ -25,12 +25,21 @@ function tomorrow(): string {
   return toDateInput(date);
 }
 
+/**
+ * วันที่เริ่มต้นของฟอร์ม: ใช้ ?date=yyyy-MM-dd ถ้ามาจากตารางการใช้ห้อง ไม่อย่างนั้นใช้วันพรุ่งนี้
+ * ฟอร์มนี้แสดงหลัง RequireAuth โหลดเสร็จบนเบราว์เซอร์แล้ว จึงอ่าน window ได้
+ */
+function initialDate(): string {
+  const date = new URLSearchParams(window.location.search).get("date");
+  return date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : tomorrow();
+}
+
 function BookingForm() {
   const { id } = useParams<{ id: string }>();
   const roomId = Number(id);
   const router = useRouter();
   const [room, setRoom] = useState<Room | null>(null);
-  const [date, setDate] = useState(tomorrow);
+  const [date, setDate] = useState(initialDate);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("11:00");
   const [purpose, setPurpose] = useState("");
