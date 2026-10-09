@@ -9,6 +9,7 @@ import com.example.cp_room_booking.dto.response.BookingHistoryResponse;
 import com.example.cp_room_booking.dto.response.BookingResponse;
 import com.example.cp_room_booking.event.BookingStatusChangedEvent;
 import com.example.cp_room_booking.exception.BusinessRuleException;
+import com.example.cp_room_booking.exception.ConflictException;
 import com.example.cp_room_booking.exception.ForbiddenOperationException;
 import com.example.cp_room_booking.exception.InvalidBookingStateException;
 import com.example.cp_room_booking.exception.ResourceNotFoundException;
@@ -20,6 +21,7 @@ import com.example.cp_room_booking.repository.BookingStatusHistoryRepository;
 import com.example.cp_room_booking.repository.UserRepository;
 import com.example.cp_room_booking.security.UserPrincipal;
 import com.example.cp_room_booking.service.BookingLifecycleService;
+import com.example.cp_room_booking.service.RoomQueryService;
 import com.example.cp_room_booking.service.state.BookingState;
 import com.example.cp_room_booking.service.state.BookingStateFactory;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +52,7 @@ public class BookingLifecycleServiceImpl implements BookingLifecycleService {
     private final BookingLifecycleRepository lifecycleRepository;
     private final BookingStatusHistoryRepository historyRepository;
     private final UserRepository userRepository;
+    private final RoomQueryService roomQueryService;
     private final BookingStateFactory stateFactory;
     private final BookingMapper bookingMapper;
     private final BookingHistoryMapper historyMapper;
@@ -59,6 +62,8 @@ public class BookingLifecycleServiceImpl implements BookingLifecycleService {
     @Override
     @Transactional
     public BookingResponse changeStatus(Long bookingId, BookingAction action, String note, UserPrincipal actor) {
+        // ล็อกก่อนอ่าน: ถ้ามีอีกคำขอกำลังเปลี่ยนสถานะรายการนี้ จะรอจนเสร็จแล้วอ่านสถานะล่าสุด
+        lifecycleRepository.lockById(bookingId);
         Booking booking = find(bookingId);
         if (!isPermitted(action, booking, actor)) {
             throw new ForbiddenOperationException("ไม่มีสิทธิ์ทำรายการ " + action + " กับการจองนี้");
@@ -74,6 +79,9 @@ public class BookingLifecycleServiceImpl implements BookingLifecycleService {
         timeViolation(action, booking, now).ifPresent(message -> {
             throw new BusinessRuleException(message);
         });
+        if (action == BookingAction.APPROVE || action == BookingAction.CHECK_IN) {
+            ensureRoomUsable(booking);
+        }
         User changedBy = userRepository.getReferenceById(actor.getId());
         transition(booking, state, action, changedBy, note, now);
         return bookingMapper.toResponse(booking);
@@ -119,8 +127,11 @@ public class BookingLifecycleServiceImpl implements BookingLifecycleService {
         List<Booking> overdue = lifecycleRepository.findByStatusAndStartTimeBefore(
                 BookingStatus.APPROVED, now.minus(CHECK_IN_WINDOW));
         BookingState state = stateFactory.of(BookingStatus.APPROVED);
-        overdue.forEach(booking -> transition(booking, state, BookingAction.MARK_NO_SHOW, null, NO_SHOW_NOTE, now));
-        return overdue.size();
+        List<Booking> changed = overdue.stream()
+                .filter(booking -> lockAndStillIn(booking, BookingStatus.APPROVED))
+                .toList();
+        changed.forEach(booking -> transition(booking, state, BookingAction.MARK_NO_SHOW, null, NO_SHOW_NOTE, now));
+        return changed.size();
     }
 
     @Override
@@ -129,8 +140,31 @@ public class BookingLifecycleServiceImpl implements BookingLifecycleService {
         LocalDateTime now = now();
         List<Booking> finished = lifecycleRepository.findByStatusAndEndTimeBefore(BookingStatus.CHECKED_IN, now);
         BookingState state = stateFactory.of(BookingStatus.CHECKED_IN);
-        finished.forEach(booking -> transition(booking, state, BookingAction.COMPLETE, null, AUTO_COMPLETE_NOTE, now));
-        return finished.size();
+        List<Booking> changed = finished.stream()
+                .filter(booking -> lockAndStillIn(booking, BookingStatus.CHECKED_IN))
+                .toList();
+        changed.forEach(booking -> transition(booking, state, BookingAction.COMPLETE, null, AUTO_COMPLETE_NOTE, now));
+        return changed.size();
+    }
+
+    /**
+     * scheduler อ่านรายการก่อนล็อก ถ้าระหว่างนั้นมีคนเปลี่ยนสถานะไปแล้ว (เช่น เพิ่ง check-in ทัน) ให้ข้ามรายการนั้น
+     */
+    private boolean lockAndStillIn(Booking booking, BookingStatus expected) {
+        lifecycleRepository.lockById(booking.getId());
+        return lifecycleRepository.findStatusById(booking.getId()).filter(expected::equals).isPresent();
+    }
+
+    /**
+     * อนุมัติหรือ check-in ได้เฉพาะตอนที่ห้องยังเปิดใช้งาน และไม่มีช่วงปิดห้องทับเวลาการจอง
+     * (ช่วงปิดอาจถูกเพิ่ม หรือห้องอาจถูกเปลี่ยนเป็นปิดปรับปรุง หลังจากสร้างการจองแล้ว)
+     */
+    private void ensureRoomUsable(Booking booking) {
+        Long roomId = booking.getRoom().getId();
+        roomQueryService.getActiveRoom(roomId);
+        if (roomQueryService.isClosed(roomId, booking.getStartTime(), booking.getEndTime())) {
+            throw new ConflictException("ห้อง " + booking.getRoom().getCode() + " ปิดใช้งานในช่วงเวลาของการจองนี้");
+        }
     }
 
     private void transition(Booking booking, BookingState state, BookingAction action, User changedBy, String note,
