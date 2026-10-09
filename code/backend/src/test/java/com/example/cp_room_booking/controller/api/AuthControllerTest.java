@@ -16,6 +16,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -64,6 +66,41 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(REGISTER_BODY))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("อีเมลถูกใช้แล้ว"));
+    }
+
+    @Test
+    void register_thaiPasswordOver72Bytes_returns400InsteadOf500() throws Exception {
+        // 25 ตัวอักษรผ่าน @Size แต่เป็น 75 ไบต์ ซึ่ง BCrypt รับไม่ได้
+        String body = """
+                {"email":"new@kkumail.com","password":"%s","fullName":"ผู้ใช้ใหม่"}
+                """.formatted("ก".repeat(25));
+
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("password"));
+        verify(authService, never()).register(any());
+    }
+
+    @Test
+    void register_thaiPasswordWithin72Bytes_isAccepted() throws Exception {
+        when(authService.register(any())).thenReturn(authResponse());
+        String body = """
+                {"email":"new@kkumail.com","password":"%s","fullName":"ผู้ใช้ใหม่"}
+                """.formatted("ก".repeat(24));
+
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void login_passwordOver72Bytes_returns400InsteadOf500() throws Exception {
+        String body = """
+                {"email":"student@kkumail.com","password":"%s"}
+                """.formatted("ก".repeat(25));
+
+        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        verify(authService, never()).login(any());
     }
 
     @Test
