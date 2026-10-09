@@ -7,6 +7,24 @@ import { useAuth } from "@/context/AuthContext";
 import { errorMessage } from "@/lib/api";
 import { Alert, Button, Card, Field, Input } from "@/components/ui";
 
+const DEFAULT_NEXT = "/rooms";
+
+/**
+ * รับเฉพาะ path ภายในเว็บนี้ กัน open redirect เช่น ?next=//evil.com หรือ ?next=/\evil.com
+ * ที่ขึ้นต้นด้วย "/" แต่เบราว์เซอร์ตีความเป็นโดเมนอื่น
+ */
+function safeNext(next: string | null): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
+    return DEFAULT_NEXT;
+  }
+  try {
+    const url = new URL(next, window.location.origin);
+    return url.origin === window.location.origin ? `${url.pathname}${url.search}${url.hash}` : DEFAULT_NEXT;
+  } catch {
+    return DEFAULT_NEXT;
+  }
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
@@ -21,8 +39,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      const next = new URLSearchParams(window.location.search).get("next");
-      router.push(next && next.startsWith("/") ? next : "/rooms");
+      router.push(safeNext(new URLSearchParams(window.location.search).get("next")));
     } catch (err) {
       setError(errorMessage(err));
     } finally {
