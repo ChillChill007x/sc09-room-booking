@@ -60,8 +60,8 @@ class RoomRepositoryTest {
     @Test
     void specification_keyword_matchesCodeOrNameIgnoringCase() {
         assertThat(roomRepository.findAll(keyword("sc09-922"))).hasSize(3);
-        assertThat(roomRepository.findAll(keyword("ประชุม"))).extracting(Room::getCode)
-                .containsExactlyInAnyOrder("SC09-9231", "SC09-9428");
+        assertThat(roomRepository.findAll(keyword("lab network"))).extracting(Room::getCode)
+                .containsExactly("SC09-9524");
     }
 
     @Test
@@ -70,10 +70,10 @@ class RoomRepositoryTest {
                 PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "capacity")
                         .and(Sort.by(Sort.Direction.ASC, "code"))));
 
-        assertThat(page.getTotalElements()).isEqualTo(13);
-        assertThat(page.getTotalPages()).isEqualTo(5);
+        assertThat(page.getTotalElements()).isEqualTo(16);
+        assertThat(page.getTotalPages()).isEqualTo(6);
         assertThat(page.getContent()).extracting(Room::getCode)
-                .containsExactly("SC09-CP9127", "SC09-9226", "SC09-9227");
+                .containsExactly("SC09-CP9127", "SC09-9525", "SC09-9421");
     }
 
     @Test
@@ -82,8 +82,8 @@ class RoomRepositoryTest {
 
         assertThat(room.getEquipment()).extracting(link -> link.getEquipment().getName(), RoomEquipment::getQuantity)
                 .containsExactlyInAnyOrder(
-                        tuple("คอมพิวเตอร์", 40),
-                        tuple("โปรเจกเตอร์", 1));
+                        tuple("คอมพิวเตอร์", 50),
+                        tuple("โปรเจกเตอร์", 2));
     }
 
     @Test
