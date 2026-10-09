@@ -57,6 +57,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse create(UserPrincipal actor, BookingRequest request) {
+        lockUserAndRoom(actor.getId(), request.roomId());
         BookingValidationContext context = contextOf(actor, request, null);
         validationChain.validate(context);
 
@@ -84,6 +85,8 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse update(Long id, UserPrincipal actor, BookingRequest request) {
+        lockUserAndRoom(actor.getId(), request.roomId());
+        bookingRepository.lockBooking(id);
         Booking booking = findEditable(id, actor);
         BookingValidationContext context = contextOf(actor, request, id);
         validationChain.validate(context);
@@ -94,7 +97,19 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void delete(Long id, UserPrincipal actor) {
+        bookingRepository.lockBooking(id);
         bookingRepository.delete(findEditable(id, actor));
+    }
+
+    /**
+     * ล็อกผู้จอง (กันโควตาการจองเกินเมื่อส่งหลายคำขอพร้อมกัน) แล้วล็อกห้อง (กันจองเวลาชนพร้อมกัน)
+     * ต้องเรียกก่อนตรวจกฎทุกครั้ง ล็อกจะปล่อยเมื่อ transaction จบ
+     */
+    private void lockUserAndRoom(Long userId, Long roomId) {
+        bookingRepository.lockUser(userId);
+        if (roomId != null) {
+            bookingRepository.lockRoom(roomId);
+        }
     }
 
     @Override
