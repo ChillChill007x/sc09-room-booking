@@ -15,8 +15,11 @@ interface NavLink {
 
 const USER_LINKS: NavLink[] = [
   { href: "/rooms", label: "ห้อง" },
+  { href: "/schedule", label: "ตารางห้อง" },
   { href: "/bookings", label: "การจองของฉัน" },
 ];
+
+const HELP_LINK: NavLink = { href: "/help", label: "คู่มือ" };
 
 const STAFF_LINKS: NavLink[] = [
   { href: "/admin/dashboard", label: "แดชบอร์ด" },
@@ -31,7 +34,9 @@ export function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const links = user ? [...USER_LINKS, ...(isStaff(user) ? STAFF_LINKS : [])] : [{ href: "/rooms", label: "ห้อง" }];
+  const links = user
+    ? [...USER_LINKS, ...(isStaff(user) ? STAFF_LINKS : []), HELP_LINK]
+    : [{ href: "/rooms", label: "ห้อง" }, HELP_LINK];
   const linkClass = (href: string) =>
     `rounded-md px-3 py-2 text-sm ${
       pathname === href || pathname.startsWith(`${href}/`)
