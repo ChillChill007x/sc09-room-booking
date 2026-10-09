@@ -76,5 +76,33 @@ jobs:
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
-      - name: Build images with docker compose
-        run: docker compose build
+
+      - name: Build images with retry for Docker Hub rate limit
+        shell: bash
+        run: |
+          build_log=$(mktemp)
+
+          for attempt in 1 2 3; do
+            echo "Build attempt $attempt/3"
+
+            if docker compose build > "$build_log" 2>&1; then
+              cat "$build_log"
+              exit 0
+            else
+              build_status=$?
+            fi
+
+            cat "$build_log"
+
+            if ! grep -Eqi '429 Too Many Requests|toomanyrequests|pull rate limit' "$build_log"; then
+              exit "$build_status"
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              exit "$build_status"
+            fi
+
+            delay=$((attempt * 60))
+            echo "Docker Hub rate limit: retrying in $delay seconds"
+            sleep "$delay"
+          done
