@@ -28,7 +28,14 @@ function MyBookings() {
     () =>
       bookingApi
         .byUser(user!.id, { page, size: 10, sort: "startTime,desc" })
-        .then(setData)
+        .then((result) => {
+          // ลบคำขอสุดท้ายของหน้าสุดท้ายแล้วหน้านี้จะว่าง ให้ถอยไปหน้าสุดท้ายที่ยังมีข้อมูล (useEffect จะโหลดให้ใหม่)
+          if (result.content.length === 0 && page > 0) {
+            setPage(Math.max(result.totalPages - 1, 0));
+            return;
+          }
+          setData(result);
+        })
         .catch((err) => setError(errorMessage(err))),
     [user, page],
   );
