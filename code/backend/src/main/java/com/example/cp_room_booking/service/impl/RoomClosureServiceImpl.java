@@ -10,6 +10,7 @@ import com.example.cp_room_booking.exception.ResourceNotFoundException;
 import com.example.cp_room_booking.mapper.RoomMapper;
 import com.example.cp_room_booking.repository.RoomClosureRepository;
 import com.example.cp_room_booking.repository.RoomRepository;
+import com.example.cp_room_booking.service.BookingQueryService;
 import com.example.cp_room_booking.service.RoomClosureService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class RoomClosureServiceImpl implements RoomClosureService {
     private final RoomRepository roomRepository;
     private final RoomClosureRepository roomClosureRepository;
     private final RoomMapper roomMapper;
+    private final BookingQueryService bookingQueryService;
 
     @Override
     @Transactional(readOnly = true)
@@ -37,12 +39,18 @@ public class RoomClosureServiceImpl implements RoomClosureService {
     @Override
     @Transactional
     public RoomClosureResponse create(Long roomId, RoomClosureRequest request) {
+        // ล็อกแถวห้องเดียวกับที่การสร้างการจองล็อก กันการจองใหม่แทรกเข้ามาระหว่างตรวจ
+        roomRepository.lockById(roomId);
         Room room = requireRoom(roomId);
         if (!request.startTime().isBefore(request.endTime())) {
             throw new BusinessRuleException("เวลาเริ่มต้องมาก่อนเวลาสิ้นสุด");
         }
         if (roomClosureRepository.existsOverlap(roomId, request.startTime(), request.endTime())) {
             throw new ConflictException("ช่วงเวลานี้ทับกับช่วงปิดห้องที่มีอยู่แล้ว");
+        }
+        if (bookingQueryService.hasActiveBookingOverlap(roomId, request.startTime(), request.endTime())) {
+            throw new ConflictException("มีการจองที่ยังใช้งานอยู่ในช่วงเวลานี้ "
+                    + "กรุณายกเลิกหรือปฏิเสธการจองเหล่านั้นก่อนปิดห้อง");
         }
         RoomClosure saved = roomClosureRepository.save(roomMapper.toClosure(room, request));
         return roomMapper.toClosureResponse(saved);
