@@ -11,6 +11,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static com.example.cp_room_booking.repository.specification.RoomSpecifications.keyword;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -95,6 +96,26 @@ class BookingRepositoryTest {
 
         assertThat(bookingRepository.countByUserIdAndStatusInAndEndTimeAfter(student.getId(), BookingStatus.ACTIVE,
                 TEN.minusDays(1))).isEqualTo(before);
+    }
+
+    @Test
+    void findAllInRange_returnsBookingsOfDayWithRoomLoadedAndFiltersStatus() {
+        bookingRepository.save(booking(TEN.plusHours(3), NOON.plusHours(3), BookingStatus.REJECTED));
+        bookingRepository.save(booking(TEN.plusDays(1), NOON.plusDays(1), BookingStatus.APPROVED));
+
+        List<Booking> day = bookingRepository.findAllInRange(TEN.toLocalDate().atStartOfDay(),
+                TEN.toLocalDate().plusDays(1).atStartOfDay(), BookingStatus.ACTIVE);
+
+        assertThat(day).extracting(Booking::getId).containsExactly(existing.getId());
+        assertThat(day.get(0).getRoom().getCode()).isEqualTo("SC09-9226");
+    }
+
+    @Test
+    void lockQueries_returnIdOfExistingRowsOnly() {
+        assertThat(bookingRepository.lockRoom(room.getId())).contains(room.getId());
+        assertThat(bookingRepository.lockUser(student.getId())).contains(student.getId());
+        assertThat(bookingRepository.lockBooking(existing.getId())).contains(existing.getId());
+        assertThat(bookingRepository.lockBooking(NO_BOOKING)).isEmpty();
     }
 
     private boolean overlaps(LocalDateTime start, LocalDateTime end) {
