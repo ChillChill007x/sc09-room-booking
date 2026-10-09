@@ -12,6 +12,7 @@ import com.example.cp_room_booking.dto.response.AllowedActionsResponse;
 import com.example.cp_room_booking.dto.response.BookingResponse;
 import com.example.cp_room_booking.event.BookingStatusChangedEvent;
 import com.example.cp_room_booking.exception.BusinessRuleException;
+import com.example.cp_room_booking.exception.ConflictException;
 import com.example.cp_room_booking.exception.ForbiddenOperationException;
 import com.example.cp_room_booking.exception.InvalidBookingStateException;
 import com.example.cp_room_booking.mapper.BookingHistoryMapper;
@@ -21,6 +22,7 @@ import com.example.cp_room_booking.repository.BookingRepository;
 import com.example.cp_room_booking.repository.BookingStatusHistoryRepository;
 import com.example.cp_room_booking.repository.UserRepository;
 import com.example.cp_room_booking.security.UserPrincipal;
+import com.example.cp_room_booking.service.RoomQueryService;
 import com.example.cp_room_booking.service.state.ApprovedState;
 import com.example.cp_room_booking.service.state.BookingStateFactory;
 import com.example.cp_room_booking.service.state.CancelledState;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -52,6 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,6 +78,8 @@ class BookingLifecycleServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private RoomQueryService roomQueryService;
 
     private final User owner = User.builder().id(OWNER_ID).email("student@kkumail.com").passwordHash("x")
             .role(Role.STUDENT).status(UserStatus.ACTIVE).build();
@@ -217,6 +223,7 @@ class BookingLifecycleServiceImplTest {
     void markNoShows_changesOverdueApprovedBookingsWithoutActor() {
         Booking overdue = booking(BookingStatus.APPROVED);
         when(lifecycleRepository.findByStatusAndStartTimeBefore(any(), any())).thenReturn(List.of(overdue));
+        when(lifecycleRepository.findStatusById(100L)).thenReturn(Optional.of(BookingStatus.APPROVED));
 
         int changed = service(START.plusMinutes(20)).markNoShows();
 
@@ -230,6 +237,7 @@ class BookingLifecycleServiceImplTest {
     void completeFinished_changesCheckedInBookingsPastEndTime() {
         Booking finished = booking(BookingStatus.CHECKED_IN);
         when(lifecycleRepository.findByStatusAndEndTimeBefore(any(), any())).thenReturn(List.of(finished));
+        when(lifecycleRepository.findStatusById(100L)).thenReturn(Optional.of(BookingStatus.CHECKED_IN));
 
         int changed = service(START.plusHours(3)).completeFinished();
 
@@ -237,10 +245,79 @@ class BookingLifecycleServiceImplTest {
         assertThat(finished.getStatus()).isEqualTo(BookingStatus.COMPLETED);
     }
 
+    @Test
+    void markNoShows_skipsBookingCheckedInAfterSchedulerRead() {
+        // scheduler อ่านได้ APPROVED แต่ก่อนล็อก เจ้าของ check-in ทันแล้ว
+        Booking overdue = booking(BookingStatus.APPROVED);
+        when(lifecycleRepository.findByStatusAndStartTimeBefore(any(), any())).thenReturn(List.of(overdue));
+        when(lifecycleRepository.findStatusById(100L)).thenReturn(Optional.of(BookingStatus.CHECKED_IN));
+
+        int changed = service(START.plusMinutes(20)).markNoShows();
+
+        assertThat(changed).isZero();
+        assertThat(overdue.getStatus()).isEqualTo(BookingStatus.APPROVED);
+        verify(lifecycleRepository).lockById(100L);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void changeStatus_locksBookingBeforeReadingIt() {
+        stub(BookingStatus.PENDING);
+
+        service(START.minusDays(1)).changeStatus(100L, BookingAction.APPROVE, null, principal(2L, Role.STAFF));
+
+        InOrder order = inOrder(lifecycleRepository, bookingRepository);
+        order.verify(lifecycleRepository).lockById(100L);
+        order.verify(bookingRepository).findDetailById(100L);
+    }
+
+    @Test
+    void approve_whenRoomClosedDuringBooking_throwsConflictAndKeepsPending() {
+        Booking booking = stub(BookingStatus.PENDING);
+        when(roomQueryService.isClosed(7L, START, START.plusHours(2))).thenReturn(true);
+
+        assertThatThrownBy(() -> service(START.minusDays(1))
+                .changeStatus(100L, BookingAction.APPROVE, null, principal(2L, Role.STAFF)))
+                .isInstanceOf(ConflictException.class);
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.PENDING);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void checkIn_whenRoomClosedDuringBooking_throwsConflict() {
+        stub(BookingStatus.APPROVED);
+        when(roomQueryService.isClosed(7L, START, START.plusHours(2))).thenReturn(true);
+
+        assertThatThrownBy(() -> service(START).changeStatus(100L, BookingAction.CHECK_IN, null,
+                principal(OWNER_ID, Role.STUDENT))).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void approve_whenRoomNoLongerActive_isRejected() {
+        Booking booking = stub(BookingStatus.PENDING);
+        when(roomQueryService.getActiveRoom(7L)).thenThrow(new BusinessRuleException("ห้องไม่เปิดให้จอง"));
+
+        assertThatThrownBy(() -> service(START.minusDays(1))
+                .changeStatus(100L, BookingAction.APPROVE, null, principal(2L, Role.STAFF)))
+                .isInstanceOf(BusinessRuleException.class);
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.PENDING);
+    }
+
+    @Test
+    void reject_whenRoomClosed_isStillAllowed() {
+        Booking booking = stub(BookingStatus.PENDING);
+        when(roomQueryService.isClosed(any(), any(), any())).thenReturn(true);
+
+        service(START.minusDays(1)).changeStatus(100L, BookingAction.REJECT, "ห้องปิดซ่อม", principal(2L, Role.STAFF));
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.REJECTED);
+    }
+
     private BookingLifecycleServiceImpl service(LocalDateTime now) {
         Clock clock = Clock.fixed(now.atZone(ZONE).toInstant(), ZONE);
         return new BookingLifecycleServiceImpl(bookingRepository, lifecycleRepository, historyRepository,
-                userRepository, factory, new BookingMapper(), new BookingHistoryMapper(), eventPublisher, clock);
+                userRepository, roomQueryService, factory, new BookingMapper(), new BookingHistoryMapper(),
+                eventPublisher, clock);
     }
 
     private Booking stub(BookingStatus status) {

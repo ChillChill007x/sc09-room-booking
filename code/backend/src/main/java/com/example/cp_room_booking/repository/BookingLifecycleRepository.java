@@ -7,6 +7,7 @@ import org.springframework.data.repository.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * query ที่ใช้เฉพาะงานวงจรสถานะ (คนที่ 4) แยกจาก BookingRepository ของคนที่ 3 เพื่อไม่แก้ไฟล์ของคนอื่น
@@ -24,4 +25,17 @@ public interface BookingLifecycleRepository extends Repository<Booking, Long> {
             where b.status = :status and b.endTime < :threshold
             """)
     List<Booking> findByStatusAndEndTimeBefore(BookingStatus status, LocalDateTime threshold);
+
+    /**
+     * ล็อกแถวการจอง (SELECT ... FOR UPDATE) ก่อนเปลี่ยนสถานะ กันเจ้าหน้าที่ 2 คนอนุมัติและปฏิเสธรายการเดียวกันพร้อมกัน
+     * คำขอที่มาทีหลังจะรอจนคำขอแรก commit แล้วจึงอ่านสถานะล่าสุด
+     */
+    @Query(value = "SELECT id FROM bookings WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Long> lockById(Long id);
+
+    /**
+     * อ่านสถานะจากฐานข้อมูลตรงๆ (ไม่ใช้ค่าที่ค้างใน persistence context) ใช้หลังล็อกเพื่อตรวจว่ายังเป็นสถานะเดิม
+     */
+    @Query("select b.status from Booking b where b.id = :id")
+    Optional<BookingStatus> findStatusById(Long id);
 }
