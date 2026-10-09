@@ -1,6 +1,7 @@
 package com.example.cp_room_booking.dto.request;
 
 import com.example.cp_room_booking.domain.enums.Role;
+import com.example.cp_room_booking.dto.validation.MaxUtf8Bytes;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -17,6 +18,7 @@ public record RegisterRequest(
 
         @NotBlank(message = "กรุณากรอกรหัสผ่าน")
         @Size(min = 8, max = 72, message = "รหัสผ่านต้องยาว 8 ถึง 72 ตัวอักษร")
+        @MaxUtf8Bytes(value = 72, message = "รหัสผ่านยาวเกินไป (ภาษาไทย 1 ตัวนับเป็น 3 ไบต์ รวมได้ไม่เกิน 72 ไบต์)")
         String password,
 
         @NotBlank(message = "กรุณากรอกชื่อ-นามสกุล")
