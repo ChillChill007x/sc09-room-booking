@@ -90,10 +90,23 @@ function RoomManagement() {
       />
       {error && <Alert tone="error">{error}</Alert>}
       {panel?.kind === "form" && (
-        <RoomForm room={panel.room} roomTypes={roomTypes} onCancel={() => setPanel(null)} onSaved={done} />
+        // key ตาม ID ให้ฟอร์มเริ่ม state ใหม่ทุกครั้งที่สลับห้อง ไม่ค้างข้อมูลห้องก่อนหน้า
+        <RoomForm
+          key={panel.room?.id ?? "new"}
+          room={panel.room}
+          roomTypes={roomTypes}
+          onCancel={() => setPanel(null)}
+          onSaved={done}
+        />
       )}
       {panel?.kind === "equipment" && (
-        <EquipmentEditor room={panel.room} equipment={equipment} onCancel={() => setPanel(null)} onSaved={done} />
+        <EquipmentEditor
+          key={panel.room.id}
+          room={panel.room}
+          equipment={equipment}
+          onCancel={() => setPanel(null)}
+          onSaved={done}
+        />
       )}
       {panel?.kind === "closures" && (
         <Card className="mb-4">
@@ -103,7 +116,7 @@ function RoomManagement() {
               ปิด
             </Button>
           </div>
-          <RoomClosureForm roomId={panel.room.id} />
+          <RoomClosureForm key={panel.room.id} roomId={panel.room.id} />
         </Card>
       )}
       {!data ? (

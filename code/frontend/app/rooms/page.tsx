@@ -14,6 +14,9 @@ const SORT_OPTIONS = [
   { value: "floor,asc", label: "ชั้น" },
 ];
 
+// อาคาร SC09 มี 6 ชั้น (ข้อมูลห้องใน V2__rooms.sql มีชั้น 1, 2, 4, 5, 6)
+const BUILDING_FLOORS = [1, 2, 3, 4, 5, 6];
+
 type Mode = "browse" | "available";
 
 export default function RoomsPage() {
@@ -88,7 +91,7 @@ function BrowseRooms({ roomTypes, equipment }: { roomTypes: RoomType[]; equipmen
         <Field label="ชั้น">
           <Select onChange={(e) => change({ floor: toNumber(e.target.value) })}>
             <option value="">ทุกชั้น</option>
-            {[1, 2, 3, 4].map((floor) => (
+            {BUILDING_FLOORS.map((floor) => (
               <option key={floor} value={floor}>
                 ชั้น {floor}
               </option>
