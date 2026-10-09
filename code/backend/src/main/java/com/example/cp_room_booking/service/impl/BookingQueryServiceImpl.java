@@ -15,6 +15,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class BookingQueryServiceImpl implements BookingQueryService {
 
+    /** ไม่มีการจองที่ต้องยกเว้น (existsOverlap ใช้ excludeId ตอนแก้ไขการจอง) */
+    private static final long NO_BOOKING = -1L;
+
     private final BookingRepository bookingRepository;
     private final Clock clock;
 
@@ -29,5 +32,11 @@ public class BookingQueryServiceImpl implements BookingQueryService {
     public boolean hasFutureBookings(Long roomId) {
         return bookingRepository.existsByRoomIdAndStatusInAndEndTimeAfter(roomId, BookingStatus.ACTIVE,
                 LocalDateTime.now(clock));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveBookingOverlap(Long roomId, LocalDateTime start, LocalDateTime end) {
+        return bookingRepository.existsOverlap(roomId, start, end, BookingStatus.ACTIVE, NO_BOOKING);
     }
 }
