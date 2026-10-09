@@ -7,6 +7,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,4 +30,11 @@ public interface RoomRepository extends JpaRepository<Room, Long>, JpaSpecificat
     boolean existsByCodeIgnoreCaseAndIdNot(String code, Long id);
 
     boolean existsByRoomTypeId(Long roomTypeId);
+
+    /**
+     * ล็อกแถวห้อง (SELECT ... FOR UPDATE) ระหว่างสร้างช่วงปิดห้อง แถวเดียวกับที่การสร้างการจองล็อก
+     * จึงสร้างช่วงปิดกับจองห้องพร้อมกันแล้วทับกันไม่ได้
+     */
+    @Query(value = "SELECT id FROM rooms WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Long> lockById(Long id);
 }

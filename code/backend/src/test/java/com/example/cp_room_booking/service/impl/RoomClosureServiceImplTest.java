@@ -13,9 +13,11 @@ import com.example.cp_room_booking.mapper.RoomMapper;
 import com.example.cp_room_booking.mapper.RoomTypeMapper;
 import com.example.cp_room_booking.repository.RoomClosureRepository;
 import com.example.cp_room_booking.repository.RoomRepository;
+import com.example.cp_room_booking.service.BookingQueryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,6 +27,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +42,8 @@ class RoomClosureServiceImplTest {
     private RoomRepository roomRepository;
     @Mock
     private RoomClosureRepository roomClosureRepository;
+    @Mock
+    private BookingQueryService bookingQueryService;
 
     private RoomClosureServiceImpl closureService;
     private final Room room = Room.builder().id(3L).code("SC09-3303").name("ประชุม").floor(3).capacity(20)
@@ -47,7 +52,31 @@ class RoomClosureServiceImplTest {
     @BeforeEach
     void setUp() {
         closureService = new RoomClosureServiceImpl(roomRepository, roomClosureRepository,
-                new RoomMapper(new RoomTypeMapper()));
+                new RoomMapper(new RoomTypeMapper()), bookingQueryService);
+    }
+
+    @Test
+    void create_overActiveBooking_throwsConflictAndDoesNotSave() {
+        when(roomRepository.findById(3L)).thenReturn(Optional.of(room));
+        when(roomClosureRepository.existsOverlap(3L, START, END)).thenReturn(false);
+        when(bookingQueryService.hasActiveBookingOverlap(3L, START, END)).thenReturn(true);
+
+        assertThatThrownBy(() -> closureService.create(3L, new RoomClosureRequest(START, END, "ซ่อม")))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("มีการจองที่ยังใช้งานอยู่");
+        verify(roomClosureRepository, never()).save(any());
+    }
+
+    @Test
+    void create_locksRoomBeforeChecking() {
+        when(roomRepository.findById(3L)).thenReturn(Optional.of(room));
+        when(roomClosureRepository.save(any(RoomClosure.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        closureService.create(3L, new RoomClosureRequest(START, END, "ซ่อม"));
+
+        InOrder order = inOrder(roomRepository, bookingQueryService);
+        order.verify(roomRepository).lockById(3L);
+        order.verify(bookingQueryService).hasActiveBookingOverlap(3L, START, END);
     }
 
     @Test
