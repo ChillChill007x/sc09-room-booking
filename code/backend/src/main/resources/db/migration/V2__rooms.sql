@@ -108,15 +108,15 @@ SELECT 'SC09-9524', 'LAB NETWORK Cisco 9524', 5, 45, 'ห้องปฏิบ�
 INSERT INTO rooms (code, name, floor, capacity, description, room_type_id, status)
 SELECT 'SC09-9525', 'ห้อง 9525', 5, 120, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องบรรยาย';
 INSERT INTO rooms (code, name, floor, capacity, description, room_type_id, status)
-SELECT 'SC09-9527', 'ห้อง 9527', 5, 36, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องปฏิบัติการคอมพิวเตอร์';
+SELECT 'SC09-9527', 'ห้อง 9527', 5, 36, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องบรรยาย';
 
 -- ชั้น 6
 INSERT INTO rooms (code, name, floor, capacity, description, room_type_id, status)
-SELECT 'SC09-9603', 'ห้อง 9603', 5, 30, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องบรรยาย';
+SELECT 'SC09-9603', 'ห้อง 9603', 6, 30, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องปฏิบัติการคอมพิวเตอร์';
 INSERT INTO rooms (code, name, floor, capacity, description, room_type_id, status)
-SELECT 'SC09-9604', 'ห้อง 9604', 5, 30, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องบรรยาย';
+SELECT 'SC09-9604', 'ห้อง 9604', 6, 30, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องปฏิบัติการคอมพิวเตอร์';
 INSERT INTO rooms (code, name, floor, capacity, description, room_type_id, status)
-SELECT 'SC09-9605', 'ห้อง 9605', 5, 30, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องบรรยาย';
+SELECT 'SC09-9605', 'ห้อง 9605', 6, 30, NULL, id, 'ACTIVE' FROM room_types WHERE name = 'ห้องปฏิบัติการคอมพิวเตอร์';
 
 -- อุปกรณ์ในแต่ละห้อง 
 INSERT INTO room_equipment (room_id, equipment_id, quantity)
@@ -182,4 +182,4 @@ SELECT r.id, e.id, 1 FROM rooms r, equipment e WHERE r.code = 'SC09-9604' AND e.
 INSERT INTO room_equipment (room_id, equipment_id, quantity)
 SELECT r.id, e.id, 30 FROM rooms r, equipment e WHERE r.code = 'SC09-9605' AND e.name = 'คอมพิวเตอร์';
 INSERT INTO room_equipment (room_id, equipment_id, quantity)
-SELECT r.id, e.id, 1 FROM rooms r, equipment e WHERE r.code = 'SC09-9604' AND e.name = 'โปรเจกเตอร์';
+SELECT r.id, e.id, 1 FROM rooms r, equipment e WHERE r.code = 'SC09-9605' AND e.name = 'โปรเจกเตอร์';
