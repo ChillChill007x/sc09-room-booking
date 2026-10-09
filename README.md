@@ -244,6 +244,7 @@ docker compose up --build
 | Rooms | `GET, POST /rooms`, `GET, PUT, DELETE /rooms/{id}`, `GET /rooms/available` | Kritsada |
 | Equipment, Room Types | `/equipment`, `/room-types`, `/rooms/{id}/equipment`, `/rooms/{id}/closures` | Kritsada |
 | Bookings | `GET, POST /bookings`, `GET, PUT, DELETE /bookings/{id}`, `GET /users/{userId}/bookings`, `GET /rooms/{roomId}/bookings` | Anatta |
+| Schedule | `GET /schedule/month?month=yyyy-MM`, `GET /schedule/day?date=yyyy-MM-dd` | Anatta |
 | Booking Status | `PATCH /bookings/{id}/status`, `GET /bookings/{id}/history`, `GET /bookings/{id}/allowed-actions` | Phatcharaphon |
 | Notifications | `GET /users/me/notifications`, `PATCH /notifications/{id}/read`, `DELETE /notifications/{id}` | Suphakit |
 | Stats | `GET /stats/summary`, `GET /stats/room-usage` | Suphakit |
