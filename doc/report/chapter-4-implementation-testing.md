@@ -16,7 +16,7 @@ sc09-room-booking/
 │   │       ├── exception/       exception ของระบบ + GlobalExceptionHandler
 │   │       ├── mapper/          แปลง entity ↔ DTO
 │   │       ├── repository/      Spring Data JPA
-│   │       ├── security/        JWT filter, UserPrincipal, validator
+│   │       ├── security/        JwtService, JWT filter, UserPrincipal, ตัวตอบ 401/403
 │   │       └── service/         interface, impl, policy, validation, state, notification, scheduler
 │   └── frontend/                Next.js 16 (TypeScript)
 │       ├── app/                 หน้าเว็บตาม route
@@ -30,7 +30,7 @@ sc09-room-booking/
 └── .github/workflows/           ci.yml, deploy.yml
 ```
 
-ขนาดของโค้ด: backend 155 ไฟล์ Java, test 37 ไฟล์, frontend 36 ไฟล์ TypeScript/TSX
+ขนาดของโค้ด: backend 155 ไฟล์ Java, test 37 ไฟล์, frontend 37 ไฟล์ TypeScript/TSX
 
 ## 4.2 การพัฒนาส่วน Backend
 
@@ -51,9 +51,9 @@ public UserResponse findById(@PathVariable Long id) { ... }
 `BookingServiceImpl.create()` ทำงานใน transaction เดียว
 
 1. ล็อกแถวผู้ใช้และห้อง (`SELECT ... FOR UPDATE`) ตามลำดับเดียวกันทุกครั้ง
-2. สร้าง `BookingValidationContext` และเลือก `BookingPolicy` ตามบทบาท (Strategy)
-3. ส่ง context ผ่าน chain ตรวจกฎ 5 ขั้น (Chain of Responsibility) ถ้าขั้นไหนไม่ผ่านจะโยน exception ทันที
-4. กำหนดสถานะเริ่มต้นจาก `policy.requiresApproval()` แล้วบันทึกการจองและประวัติสถานะ
+2. สร้าง `BookingValidationContext` จากผู้ใช้และคำขอ
+3. ส่ง context ผ่าน chain ตรวจกฎ 5 ขั้น (Chain of Responsibility) โดยขั้นที่ 2 `PolicyHandler` เรียก `BookingPolicyResolver` เลือก `BookingPolicy` ตามบทบาท (Strategy) แล้วเก็บไว้ใน context ถ้าขั้นไหนไม่ผ่านจะโยน exception ทันที
+4. กำหนดสถานะเริ่มต้นจาก `requiresApproval()` ของ policy ใน context แล้วบันทึกการจองและประวัติสถานะ
 5. publish `BookingCreatedEvent` ซึ่ง `NotificationListener` จะรับหลัง commit สำเร็จ (Observer)
 
 ```java
@@ -63,7 +63,7 @@ BookingStatus initial = context.getPolicy().requiresApproval()
 
 ### 4.2.3 วงจรสถานะและ Scheduler
 
-`BookingLifecycleServiceImpl.changeStatus()` ล็อกแถวการจอง อ่านสถานะล่าสุด ขอ object สถานะจาก `BookingStateFactory` แล้วเรียก method ตาม action (approve, reject, cancel, checkIn, complete, markNoShow) สถานะที่ไม่รองรับ action นั้นโยน `InvalidBookingStateException` (409) โดยไม่ต้องเขียน `if` ตามสถานะใน service (State Pattern)
+`BookingLifecycleServiceImpl.changeStatus()` ล็อกแถวการจอง อ่านสถานะล่าสุด แล้วขอ object สถานะจาก `BookingStateFactory` แต่ละสถานะสืบทอด `AbstractBookingState` และประกาศตาราง action → สถานะถัดไปของตัวเอง เช่น `PendingState` รับ APPROVE, REJECT และ CANCEL service ถาม `state.canHandle(action)` แล้วใช้ `state.next(action)` ได้สถานะใหม่ ถ้าสถานะไม่รองรับ action นั้นโยน `InvalidBookingStateException` (409) โดยไม่ต้องเขียน `if` ตามสถานะใน service (State Pattern) จากนั้นตรวจสิทธิ์และกรอบเวลาของ action เช่น check-in ±15 นาที
 
 `BookingStatusScheduler` รันทุก 1 นาที (`app.scheduler.fixed-delay-ms=60000`) หาการจอง APPROVED ที่เลยเวลาเริ่ม 15 นาทีแล้วเปลี่ยนเป็น NO_SHOW และการจอง CHECKED_IN ที่เลยเวลาสิ้นสุดเปลี่ยนเป็น COMPLETED โดยล็อกแถวและตรวจสถานะซ้ำก่อนเปลี่ยน เพื่อไม่ทับการกระทำของผู้ใช้ที่เกิดพร้อมกัน
 
@@ -73,7 +73,7 @@ BookingStatus initial = context.getPolicy().requiresApproval()
 
 ### 4.2.5 แจ้งเตือนและสถิติ
 
-`NotificationServiceImpl` วน `List<NotificationSender>` ที่ Spring inject ให้ ตอนนี้มี `InAppNotificationSender` ตัวเดียว ถ้าจะเพิ่มอีเมลหรือ LINE ทำได้โดยเพิ่ม class ใหม่ที่ implement `NotificationSender` โดยไม่ต้องแก้โค้ดเดิม สถิติใช้ query รวมกลุ่ม (`GROUP BY`) ตามสถานะและตามห้อง
+`NotificationServiceImpl` วน `List<NotificationSender>` ที่ Spring inject ให้ ตอนนี้มี `InAppNotificationSender` ตัวเดียว ถ้าจะเพิ่มอีเมลหรือ LINE ทำได้โดยเพิ่ม class ใหม่ที่ implement `NotificationSender` โดยไม่ต้องแก้โค้ดเดิม สถิติสรุปจำนวนการจองตามสถานะด้วย query `GROUP BY` และคำนวณชั่วโมงการใช้ของแต่ละห้องจากการจองในช่วงวันที่เลือก
 
 ### 4.2.6 การจัดการข้อผิดพลาด
 
@@ -85,11 +85,11 @@ BookingStatus initial = context.getPolicy().requiresApproval()
 
 ## 4.3 การพัฒนาส่วน Frontend
 
-- `lib/api.ts` เป็น API client กลาง แนบ JWT อัตโนมัติ แปลง error JSON ของ backend เป็นข้อความภาษาไทย และออกจากระบบเมื่อ token หมดอายุ (401)
+- `lib/api.ts` เป็น API client กลาง แนบ JWT อัตโนมัติ อ่านข้อความ error (ภาษาไทยจาก backend) และ `fieldErrors` มาแสดงในฟอร์ม และออกจากระบบเมื่อ token หมดอายุ (401)
 - `context/AuthContext` เก็บสถานะผู้ใช้ และใช้ซ่อน/แสดงเมนูตามบทบาท
 - `components/ui.tsx` รวม Button, Input, Select, Textarea, Field, Card, PageHeader, Alert, Spinner, EmptyState, Badge, Pagination ใช้ร่วมกันทุกหน้า และ `RouteGuard` กันหน้าที่ต้อง login หรือต้องเป็น S/A
 - หน้า `/schedule` แสดงปฏิทินรายเดือน (จำนวนการจองแต่ละวัน) และตารางห้อง × เวลา ของวันที่เลือก รวมช่วงปิดห้อง
-- หน้า `/rooms/[id]/book` แสดงกฎของบทบาทผู้ใช้ก่อนส่ง และแสดง error จาก chain ตรวจกฎให้ผู้ใช้แก้ได้ทันที
+- หน้า `/rooms/[id]/book` แสดงตารางห้องของวันที่เลือกข้างฟอร์ม รับวันที่จากหน้าตารางการใช้ห้อง (`?date=`) และแสดง error จาก chain ตรวจกฎ (เช่น 409 ให้เลือกช่วงเวลาอื่น) ให้ผู้ใช้แก้ได้ทันที
 - หน้า `/help` อธิบายขั้นตอนการจอง กฎตามบทบาท และความหมายของสถานะ
 
 ## 4.4 การทำงานเป็นทีมด้วย Git
@@ -106,22 +106,24 @@ BookingStatus initial = context.getPolicy().requiresApproval()
 
 ### 4.4.2 สถิติการมีส่วนร่วม (ช่วง 6–10 ต.ค. 2569)
 
+นับจาก `develop` ณ วันที่ 10 ต.ค. 2569 (หลัง merge PR #41)
+
 | สมาชิก | Commit (ไม่นับ merge) |
 |---|---:|
 | ศุภกิตติ์ | 40 |
-| ดรัณภพ | 36 |
-| อนัตตา | 33 |
-| กฤษฎา | 31 |
-| พัชรพล | 23 |
-| **รวม** | **163** |
+| ดรัณภพ | 37 |
+| อนัตตา | 35 |
+| กฤษฎา | 32 |
+| พัชรพล | 24 |
+| **รวม** | **168** |
 
-รวม Pull Request ที่ merge แล้ว 35 รายการ
+รวม Pull Request ที่ merge แล้ว 40 รายการ
 
 ## 4.5 CI/CD และการ Deploy
 
 ### 4.5.1 Continuous Integration (`ci.yml`)
 
-ทำงานทุก Pull Request และ push มี 3 job ทำงานขนานกัน
+ทำงานทุก Pull Request และ push เข้า `develop`/`main` และถูกเรียกจาก deploy workflow มี 3 job ทำงานขนานกัน
 
 | Job | ขั้นตอน |
 |---|---|
@@ -136,7 +138,7 @@ BookingStatus initial = context.getPolicy().requiresApproval()
 1. เรียก Deploy Hook ของ Render ให้ build backend จาก Dockerfile ใหม่ (Flyway รัน migration ตอนเริ่มระบบ)
 2. ใช้ Vercel CLI build และ deploy frontend ไปยัง production
 
-ค่าลับ (`RENDER_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`) เก็บใน GitHub Secrets ส่วน `JWT_SECRET` และข้อมูลเชื่อมต่อฐานข้อมูลเก็บใน environment ของ Render
+ค่าลับและค่าตั้ง (`RENDER_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `BACKEND_URL`) เก็บใน GitHub Secrets ส่วน `JWT_SECRET` และข้อมูลเชื่อมต่อฐานข้อมูลเก็บใน environment ของ Render
 
 ### 4.5.3 สภาพแวดล้อม Production
 
