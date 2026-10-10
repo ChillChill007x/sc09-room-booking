@@ -274,7 +274,7 @@ cd code/backend
 | --- | --- |
 | Surefire Test Report | `code/backend/target/surefire-reports/` |
 | JaCoCo Coverage Report | `code/backend/target/site/jacoco/index.html` |
-| Test Report ที่ส่ง | [`test/`](test/) |
+| Test Report ที่ส่ง | [`test/test-report.md`](test/test-report.md) |
 
 ## Deployment URL
 
@@ -326,7 +326,8 @@ sc09-room-booking/
 │       └── package.json
 ├── test/                                # Test Report
 ├── doc/
-│   ├── diagrams/                        # UML และ ER Diagram
+│   ├── report/                          # รายงาน 5 บท
+│   ├── diagrams/                        # UML และ ER Diagram (Mermaid)
 │   ├── slide/                           # สไลด์นำเสนอ
 │   ├── solid-analysis.md
 │   └── design-patterns.md
@@ -334,6 +335,23 @@ sc09-room-booking/
 ├── docker-compose.yml
 └── README.md
 ```
+
+## Documentation
+
+| เอกสาร | ไฟล์ |
+| --- | --- |
+| รายงานโครงงาน 5 บท | [`doc/report/`](doc/report/README.md) |
+| Use Case Diagram | [`doc/diagrams/use-case-diagram.md`](doc/diagrams/use-case-diagram.md) |
+| Conceptual Class Diagram | [`doc/diagrams/Conceptual-Class-Diagram.md`](doc/diagrams/Conceptual-Class-Diagram.md) |
+| Class Diagram | [`doc/diagrams/class-diagram.md`](doc/diagrams/class-diagram.md) |
+| ER Diagram + Data Dictionary | [`doc/diagrams/er-diagram.md`](doc/diagrams/er-diagram.md) |
+| Sequence Diagram | [`doc/diagrams/sequence-diagrams.md`](doc/diagrams/sequence-diagrams.md) |
+| State Diagram | [`doc/diagrams/state-diagram.md`](doc/diagrams/state-diagram.md) |
+| Activity Diagram | [`doc/diagrams/activity-diagram.md`](doc/diagrams/activity-diagram.md) |
+| Component / Deployment Diagram | [`doc/diagrams/component-deployment-diagram.md`](doc/diagrams/component-deployment-diagram.md) |
+| Design Patterns | [`doc/design-patterns.md`](doc/design-patterns.md) |
+| SOLID Analysis | [`doc/solid-analysis.md`](doc/solid-analysis.md) |
+| Test Report | [`test/test-report.md`](test/test-report.md) |
 
 ## Git Workflow
 
