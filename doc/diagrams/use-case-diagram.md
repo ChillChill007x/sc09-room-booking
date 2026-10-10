@@ -1,77 +1,19 @@
 # Use Case Diagram
 
-ระบบจองห้องอาคารวิทยวิภาส (SC09) แบ่งผู้ใช้เป็น 5 กลุ่มตาม `Role` ใน backend (`STUDENT`, `LECTURER`, `STAFF`, `ADMIN`) และผู้ที่ยังไม่ login ส่วน Scheduler เป็นผู้กระทำภายในระบบ (`BookingStatusScheduler`) ที่ทำงานทุก 1 นาที
+ระบบจองห้องอาคารวิทยวิภาส (SC09) มีผู้กระทำ 4 กลุ่ม ได้แก่ ผู้เยี่ยมชม (ยังไม่ login) สมาชิกที่เข้าสู่ระบบ (นักศึกษา `STUDENT` และอาจารย์ `LECTURER`) เจ้าหน้าที่ (`STAFF`) และผู้ดูแลระบบ (`ADMIN`) ผู้เยี่ยมชมกับสมาชิกสืบทอดจาก "ผู้ใช้งานทั่วไป" ซึ่งเป็น actor แบบ abstract ส่วน UC-18 ทำงานอัตโนมัติโดย Scheduler ภายในระบบ (`BookingStatusScheduler`) ทุก 1 นาที
 
 ## ภาพรวม Use Case
 
-```mermaid
-flowchart LR
-    guest(["ผู้เยี่ยมชม<br/>(ยังไม่ login)"])
-    member(["ผู้ใช้ที่ login<br/>(นักศึกษา / อาจารย์)"])
-    staff(["เจ้าหน้าที่"])
-    admin(["ผู้ดูแลระบบ"])
-    scheduler(["Scheduler<br/>(ระบบ)"])
+![Use Case Diagram ระบบจองห้องอาคารวิทยวิภาส SC09](images/use-case-diagram.svg)
 
-    subgraph SYS["ระบบจองห้อง SC09"]
-        UC1(["UC-01 สมัครสมาชิก"])
-        UC2(["UC-02 เข้าสู่ระบบ"])
-        UC3(["UC-03 ดูรายการห้อง / ค้นหา / กรอง"])
-        UC4(["UC-04 ค้นหาห้องว่าง"])
-        UC5(["UC-05 ดูคู่มือการใช้งาน"])
-        UC6(["UC-06 จองห้อง"])
-        UC7(["UC-07 ดูการจองของฉัน"])
-        UC8(["UC-08 ลบคำขอ / ยกเลิกการจอง"])
-        UC9(["UC-09 Check-in / จบการใช้งาน"])
-        UC10(["UC-10 ดูตารางการใช้ห้อง"])
-        UC11(["UC-11 ดูและจัดการแจ้งเตือน"])
-        UC12(["UC-12 แก้ไขโปรไฟล์"])
-        UC13(["UC-13 อนุมัติ / ปฏิเสธคำขอจอง"])
-        UC14(["UC-14 จัดการห้อง อุปกรณ์ ประเภทห้อง"])
-        UC15(["UC-15 กำหนดช่วงปิดห้อง"])
-        UC16(["UC-16 ดูสถิติการใช้ห้อง"])
-        UC17(["UC-17 จัดการผู้ใช้"])
-        UC18(["UC-18 บันทึกไม่มาใช้ห้อง / ปิดการจองอัตโนมัติ"])
-        UCV(["ตรวจกฎการจอง<br/>(Chain of Responsibility)"])
-        UCN(["ส่งแจ้งเตือน<br/>(Observer)"])
-    end
+| สัญลักษณ์ | ความหมาย |
+|---|---|
+| เส้นทึบ | association: actor ใช้งาน use case นั้น |
+| หัวสามเหลี่ยมโปร่ง | generalization: actor ลูกได้สิทธิ์ทั้งหมดของ actor แม่ (ผู้ดูแลระบบ → เจ้าหน้าที่ → สมาชิก → ผู้ใช้งานทั่วไป และผู้เยี่ยมชม → ผู้ใช้งานทั่วไป) |
+| เส้นประ «include» | use case ที่ถูกเรียกทุกครั้ง: จองห้องต้องผ่านการตรวจสอบกฎการจอง (Chain of Responsibility) |
+| กระดาษพับมุม | note อธิบายเพิ่มเติม |
 
-    guest --- UC1
-    guest --- UC2
-    guest --- UC3
-    guest --- UC4
-    guest --- UC5
-
-    member --- UC3
-    member --- UC4
-    member --- UC6
-    member --- UC7
-    member --- UC8
-    member --- UC9
-    member --- UC10
-    member --- UC11
-    member --- UC12
-
-    staff --- UC13
-    staff --- UC14
-    staff --- UC15
-    staff --- UC16
-    staff --- UC17
-    staff --- UC6
-    staff --- UC10
-
-    admin -. "สืบทอดสิทธิ์ทั้งหมด" .-> staff
-    staff -. "ใช้ได้ทุก use case ของ" .-> member
-
-    scheduler --- UC18
-
-    UC6 -. "include" .-> UCV
-    UC6 -. "include" .-> UCN
-    UC13 -. "include" .-> UCN
-    UC8 -. "include" .-> UCN
-    UC18 -. "include" .-> UCN
-```
-
-> Mermaid ยังไม่มีชนิด Use Case Diagram โดยตรง จึงใช้ flowchart แทน: วงรีคือ use case เส้นทึบคือ actor ใช้งาน use case นั้น เส้นประมีป้าย `include` คือ use case ที่ถูกเรียกเสมอ ส่วนเส้นประระหว่าง actor คือการสืบทอดสิทธิ์ (generalization)
+> แผนภาพเป็นไฟล์ SVG (`images/use-case-diagram.svg`) เพราะ Mermaid ไม่มีชนิด Use Case Diagram แบบ UML ฉบับแก้ไขได้ (เปิดด้วย draw.io) อยู่ที่ `images/use-case-diagram.drawio`
 
 ## สิทธิ์ของแต่ละ Actor
 
@@ -79,7 +21,7 @@ flowchart LR
 |---|:-:|:-:|:-:|:-:|:-:|---|
 | UC-01 สมัครสมาชิก | ✓ | | | | | `POST /auth/register` (สมัครได้เฉพาะ STUDENT, LECTURER) |
 | UC-02 เข้าสู่ระบบ | ✓ | | | | | `POST /auth/login` |
-| UC-03 ดูรายการห้อง | ✓ | ✓ | ✓ | ✓ | ✓ | `GET /rooms`, `GET /rooms/{id}` |
+| UC-03 ดูรายการและรายละเอียดห้อง | ✓ | ✓ | ✓ | ✓ | ✓ | `GET /rooms`, `GET /rooms/{id}` |
 | UC-04 ค้นหาห้องว่าง | ✓ | ✓ | ✓ | ✓ | ✓ | `GET /rooms/available` |
 | UC-05 ดูคู่มือ | ✓ | ✓ | ✓ | ✓ | ✓ | หน้า `/help` |
 | UC-06 จองห้อง | | ✓ (รออนุมัติ) | ✓ (อนุมัติอัตโนมัติ) | ✓ (อนุมัติอัตโนมัติ) | ✓ | `POST /bookings` |
