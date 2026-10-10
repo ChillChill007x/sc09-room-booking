@@ -1,0 +1,24 @@
+# Render Blueprint ของ backend (New > Blueprint แล้วเลือก repo นี้)
+# ฐานข้อมูลใช้ Neon หรือ Supabase แล้วใส่ค่า DB_* ใน Environment ของ service
+services:
+  - type: web
+    name: sc09-room-booking-api
+    runtime: docker
+    rootDir: code/backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    branch: develop
+    autoDeploy: false
+    healthCheckPath: /v3/api-docs
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false

@@ -1,0 +1,62 @@
+name: Deploy
+
+# deploy อัตโนมัติเมื่อ merge เข้า develop (ตามที่อาจารย์กำหนด) ต้องผ่าน CI ก่อน
+# Secrets ที่ต้องตั้งใน Settings > Secrets and variables > Actions:
+#   RENDER_DEPLOY_HOOK_URL  : Deploy Hook ของ backend บน Render
+#   VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID : ของ frontend บน Vercel
+#   BACKEND_URL             : URL จริงของ backend เช่น https://sc09-room-booking-api.onrender.com
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  backend:
+    name: Deploy backend to Render
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hook
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+
+      - name: Wait until Swagger UI is reachable
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS "${{ secrets.BACKEND_URL }}/v3/api-docs" > /dev/null; then
+              echo "Backend is up"; exit 0
+            fi
+            sleep 15
+          done
+          echo "Backend did not come up in time"; exit 1
+
+  frontend:
+    name: Deploy frontend to Vercel
+    needs: backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: code/frontend
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm install --global vercel@latest
+      - run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.BACKEND_URL }}
+      - run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

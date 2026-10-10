@@ -18,7 +18,6 @@
 | 4 | พัชรพล กองแก้ว (Phatcharaphon) | 6733804155 | 04 | `phatcharaphon_6733804155_04` | วงจรสถานะการจอง (อนุมัติ ปฏิเสธ ยกเลิก check-in), State Pattern, ประวัติการเปลี่ยนสถานะ, Scheduler ปิดการจองอัตโนมัติ, หน้าคิวอนุมัติและรายละเอียดการจอง |
 | 5 | ศุภกิตติ์ ฟันเฟือย (Suphakit) | 6733804278 | 03 | `suphakit_6733804278_03` | โมดูลแจ้งเตือนและสถิติ, Observer Pattern, Dockerfile และ docker-compose, CI/CD ด้วย GitHub Actions, Deployment, layout กลางและหน้า dashboard |
 
-
 ## Tech Stack
 
 | ส่วน | เทคโนโลยี |
@@ -191,7 +190,6 @@ Environment variable ของ backend
 | `DB_USERNAME` | `postgres` | ชื่อผู้ใช้ฐานข้อมูล |
 | `DB_PASSWORD` | `postgres` | รหัสผ่านฐานข้อมูล |
 | `JPA_DDL_AUTO` | `validate` | ให้ Flyway เป็นผู้สร้างตาราง |
-
 | `JWT_SECRET` | ค่าตัวอย่างสำหรับเครื่อง dev | คีย์สำหรับเซ็น JWT ยาวอย่างน้อย 32 ตัวอักษร |
 | `JWT_EXPIRATION_MINUTES` | `480` | อายุ token (นาที) |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | URL ของ frontend คั่นด้วย `,` |
@@ -201,8 +199,6 @@ Environment variable ของ frontend (`code/frontend/.env.local`)
 | ตัวแปร | ค่าเริ่มต้น | คำอธิบาย |
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | URL ของ backend |
-| `JWT_SECRET` | ไม่มี | คีย์สำหรับเซ็น JWT |
-
 
 ## How to Run
 
@@ -226,18 +222,19 @@ docker compose up --build
 
 บัญชีทดสอบจาก seed data
 
-| Role | Email | Password |
-| --- | --- | --- |
-| นักศึกษา | `student@kkumail.com`, `student2@kkumail.com` | `Password123!` |
-| อาจารย์ | `lecturer@kkumail.com` | `Password123!` |
-| เจ้าหน้าที่ | `staff@kkumail.com` | `Password123!` |
-| ผู้ดูแลระบบ | `admin@kkumail.com` | `Password123!` |
+| Role | Email |
+| --- | --- |
+| นักศึกษา | `student@kkumail.com`, `student2@kkumail.com` |
+| อาจารย์ | `lecturer@kkumail.com` |
+| เจ้าหน้าที่ | `staff@kkumail.com` |
+| ผู้ดูแลระบบ | `admin@kkumail.com` |
 
+รหัสผ่านสำหรับรันในเครื่องอยู่ใน comment ของ `code/backend/src/main/resources/db/migration/V1__users.sql` ส่วนบนเว็บ production เปลี่ยนรหัสผ่านแล้ว ขอรหัสสำหรับทดสอบได้จากทีมผู้พัฒนา
 
 ## API Documentation
 
 - Swagger UI (local): http://localhost:8080/swagger-ui.html
-- Swagger UI (production): TODO
+- Swagger UI (production): https://sc09-room-booking.onrender.com/swagger-ui.html
 - Base path: `/api/v1`
 
 | Resource | Endpoint หลัก | ผู้รับผิดชอบ |
@@ -247,6 +244,7 @@ docker compose up --build
 | Rooms | `GET, POST /rooms`, `GET, PUT, DELETE /rooms/{id}`, `GET /rooms/available` | Kritsada |
 | Equipment, Room Types | `/equipment`, `/room-types`, `/rooms/{id}/equipment`, `/rooms/{id}/closures` | Kritsada |
 | Bookings | `GET, POST /bookings`, `GET, PUT, DELETE /bookings/{id}`, `GET /users/{userId}/bookings`, `GET /rooms/{roomId}/bookings` | Anatta |
+| Schedule | `GET /schedule/month?month=yyyy-MM`, `GET /schedule/day?date=yyyy-MM-dd` | Anatta |
 | Booking Status | `PATCH /bookings/{id}/status`, `GET /bookings/{id}/history`, `GET /bookings/{id}/allowed-actions` | Phatcharaphon |
 | Notifications | `GET /users/me/notifications`, `PATCH /notifications/{id}/read`, `DELETE /notifications/{id}` | Suphakit |
 | Stats | `GET /stats/summary`, `GET /stats/room-usage` | Suphakit |
@@ -276,17 +274,19 @@ cd code/backend
 | --- | --- |
 | Surefire Test Report | `code/backend/target/surefire-reports/` |
 | JaCoCo Coverage Report | `code/backend/target/site/jacoco/index.html` |
-| Test Report ที่ส่ง | [`test/`](test/) |
+| Test Report ที่ส่ง | [`test/test-report.md`](test/test-report.md) |
 
 ## Deployment URL
 
 | ส่วน | URL |
 | --- | --- |
-| Frontend | TODO |
-| Backend API | TODO |
-| Swagger UI | TODO |
+| Frontend | https://sc09-room-booking.vercel.app |
+| Backend API | https://sc09-room-booking.onrender.com/api/v1 |
+| Swagger UI | https://sc09-room-booking.onrender.com/swagger-ui.html |
 
-CI/CD ใช้ GitHub Actions: ทุก Pull Request จะถูก build และ test อัตโนมัติ และเมื่อ merge เข้า `main` จะ deploy อัตโนมัติ
+Backend ใช้ Render แผนฟรี ถ้าไม่มีคนใช้ 15 นาทีจะหลับ request แรกหลังจากนั้นอาจช้าประมาณ 1 นาที
+
+CI/CD ใช้ GitHub Actions: ทุก Pull Request จะถูก build และ test อัตโนมัติ และเมื่อ merge เข้า `develop` จะ deploy อัตโนมัติ
 
 ## Project Structure
 
@@ -326,7 +326,8 @@ sc09-room-booking/
 │       └── package.json
 ├── test/                                # Test Report
 ├── doc/
-│   ├── diagrams/                        # UML และ ER Diagram
+│   ├── report/                          # รายงาน 5 บท
+│   ├── diagrams/                        # UML และ ER Diagram (Mermaid)
 │   ├── slide/                           # สไลด์นำเสนอ
 │   ├── solid-analysis.md
 │   └── design-patterns.md
@@ -335,6 +336,23 @@ sc09-room-booking/
 └── README.md
 ```
 
+## Documentation
+
+| เอกสาร | ไฟล์ |
+| --- | --- |
+| รายงานโครงงาน 5 บท | [`doc/report/`](doc/report/README.md) |
+| Use Case Diagram | [`doc/diagrams/use-case-diagram.md`](doc/diagrams/use-case-diagram.md) |
+| Conceptual Class Diagram | [`doc/diagrams/Conceptual-Class-Diagram.md`](doc/diagrams/Conceptual-Class-Diagram.md) |
+| Class Diagram | [`doc/diagrams/class-diagram.md`](doc/diagrams/class-diagram.md) |
+| ER Diagram + Data Dictionary | [`doc/diagrams/er-diagram.md`](doc/diagrams/er-diagram.md) |
+| Sequence Diagram | [`doc/diagrams/sequence-diagrams.md`](doc/diagrams/sequence-diagrams.md) |
+| State Diagram | [`doc/diagrams/state-diagram.md`](doc/diagrams/state-diagram.md) |
+| Activity Diagram | [`doc/diagrams/activity-diagram.md`](doc/diagrams/activity-diagram.md) |
+| Component / Deployment Diagram | [`doc/diagrams/component-deployment-diagram.md`](doc/diagrams/component-deployment-diagram.md) |
+| Design Patterns | [`doc/design-patterns.md`](doc/design-patterns.md) |
+| SOLID Analysis | [`doc/solid-analysis.md`](doc/solid-analysis.md) |
+| Test Report | [`test/test-report.md`](test/test-report.md) |
+
 ## Git Workflow
 
 - `main`: Production รับ merge เฉพาะเวอร์ชันที่ส่งมอบ
@@ -342,4 +360,3 @@ sc09-room-booking/
 - `ชื่อ_รหัสนักศึกษา_section`: branch ส่วนตัวของแต่ละคน
 - ทุกการรวมงานผ่าน Pull Request และมี Reviewer อย่างน้อย 1 คน
 - Commit message: `<type>: <สิ่งที่ทำ>` โดย type คือ `feat`, `fix`, `refactor`, `test`, `docs`
-

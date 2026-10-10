@@ -1,0 +1,256 @@
+{
+  "info": {
+    "name": "SC09 Room Booking",
+    "description": "Use case หลัก 3 รายการ: ค้นหาห้องว่าง, สร้างการจอง, อนุมัติและแจ้งเตือน (รัน Run collection ตามลำดับ รันซ้ำได้เพราะท้ายสุดยกเลิกการจองที่สร้าง)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// วันที่จอง = อีก 2 วันนับจากวันนี้ (นักศึกษาจองล่วงหน้าได้ไม่เกิน 7 วัน)",
+          "const d = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);",
+          "pm.collectionVariables.set('date', d.toISOString().slice(0, 10));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "bookingId", "value": "" },
+    { "key": "date", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login wrong password (401)",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('401', () => pm.response.to.have.status(401));"] } }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"staff@kkumail.com\",\"password\":\"wrong-password\"}" },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Use case 1: ค้นหาห้องว่าง",
+      "item": [
+        {
+          "name": "Login (student)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"student2@kkumail.com\",\"password\":\"Password123!\"}" },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Rooms (page, sort, filter)",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/rooms?page=0&size=5&sort=capacity,desc&minCapacity=40"
+          }
+        },
+        {
+          "name": "Available rooms",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/rooms/available?start={{date}}T09:00:00&end={{date}}T11:00:00&minCapacity=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Use case 2: สร้างการจอง",
+      "item": [
+        {
+          "name": "Create booking (student)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('นักศึกษาต้องรออนุมัติ (PENDING)', () => pm.expect(pm.response.json().status).to.eql('PENDING'));",
+                  "pm.collectionVariables.set('bookingId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"roomId\":5,\"startTime\":\"{{date}}T13:00:00\",\"endTime\":\"{{date}}T14:00:00\",\"purpose\":\"ทดสอบผ่าน Postman\",\"attendees\":10}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings"
+          }
+        },
+        {
+          "name": "Create same slot again (409)",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('409 Conflict', () => pm.response.to.have.status(409));"] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"roomId\":5,\"startTime\":\"{{date}}T13:30:00\",\"endTime\":\"{{date}}T14:30:00\",\"purpose\":\"ชนกัน\",\"attendees\":5}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Use case 3: อนุมัติและแจ้งเตือน",
+      "item": [
+        {
+          "name": "Login (staff)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"staff@kkumail.com\",\"password\":\"Password123!\"}" },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Approve booking (staff)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('สถานะเป็น APPROVED', () => pm.expect(pm.response.json().status).to.eql('APPROVED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"action\":\"APPROVE\"}" },
+            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/status"
+          }
+        },
+        {
+          "name": "Booking history",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/history" }
+        },
+        {
+          "name": "Stats summary (staff)",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/stats/summary" }
+        },
+        {
+          "name": "Login (student) อีกครั้ง",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"student2@kkumail.com\",\"password\":\"Password123!\"}" },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "My notifications (student ได้แจ้งเตือนอนุมัติ)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('มีแจ้งเตือน BOOKING_APPROVED ของการจองนี้', () => {",
+                  "  const id = Number(pm.collectionVariables.get('bookingId'));",
+                  "  const found = pm.response.json().content.some(n => n.type === 'BOOKING_APPROVED' && n.bookingId === id);",
+                  "  pm.expect(found).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/users/me/notifications" }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Cancel booking (student)",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"action\":\"CANCEL\",\"note\":\"ยกเลิกหลังทดสอบด้วย Postman\"}" },
+            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/status"
+          }
+        }
+      ]
+    }
+  ]
+}
