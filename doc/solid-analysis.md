@@ -35,6 +35,18 @@
 
 **จุดที่ยังปรับได้:** `BookingLifecycleServiceImpl` รวมการตรวจสิทธิ์ (`isPermitted`) กฎเวลา (`timeViolation`) การตรวจห้อง (`ensureRoomUsable`) และงานของ Scheduler ไว้ใน class เดียว (ประมาณ 220 บรรทัด) ถ้าระบบโตขึ้น ควรแยกกฎสิทธิ์และกฎเวลาออกเป็น policy object แบบเดียวกับฝั่งสร้างการจอง
 
+
+**หลักฐานในโค้ด** (เลขบรรทัดตาม `develop` @ `5100cf7`)
+
+| ไฟล์ : บรรทัด | สิ่งที่แสดง |
+|---|---|
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/validation/BookingValidationHandler.java:7`](../code/backend/src/main/java/com/example/cp_room_booking/service/validation/BookingValidationHandler.java#L7) | abstract handler รับผิดชอบเฉพาะการส่งต่อใน chain |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/validation/BookingValidationHandler.java:26`](../code/backend/src/main/java/com/example/cp_room_booking/service/validation/BookingValidationHandler.java#L26) | `check()` ให้ subclass ตรวจกฎของตัวเองเรื่องเดียว |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/validation/TimeRangeHandler.java:30`](../code/backend/src/main/java/com/example/cp_room_booking/service/validation/TimeRangeHandler.java#L30) | handler ตรวจเฉพาะช่วงเวลา |
+| [`code/backend/src/main/java/com/example/cp_room_booking/controller/api/BookingController.java:50`](../code/backend/src/main/java/com/example/cp_room_booking/controller/api/BookingController.java#L50) | Controller ส่งต่อให้ service ทันที ไม่มีกฎธุรกิจ |
+| [`code/backend/src/main/java/com/example/cp_room_booking/mapper/BookingMapper.java:14`](../code/backend/src/main/java/com/example/cp_room_booking/mapper/BookingMapper.java#L14) | แปลง entity เป็น DTO แยกจาก service |
+| [`code/backend/src/main/java/com/example/cp_room_booking/exception/GlobalExceptionHandler.java:29`](../code/backend/src/main/java/com/example/cp_room_booking/exception/GlobalExceptionHandler.java#L29) | แปลง exception เป็น HTTP response ที่เดียว |
+
 ---
 
 ## O — Open/Closed Principle
@@ -53,6 +65,18 @@
 
 **จุดที่ยังปรับได้:** เพิ่ม `BookingAction` ใหม่ยังต้องแก้ enum และ `switch` ใน `isPermitted` กับ `timeViolation` ของ `BookingLifecycleServiceImpl` (แต่ compiler ช่วยเตือนว่าลืมกรณีไหน เพราะใช้ switch expression ที่ต้องครบทุกค่า)
 
+
+**หลักฐานในโค้ด** (เลขบรรทัดตาม `develop` @ `5100cf7`)
+
+| ไฟล์ : บรรทัด | สิ่งที่แสดง |
+|---|---|
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/policy/BookingPolicyResolver.java:19`](../code/backend/src/main/java/com/example/cp_room_booking/service/policy/BookingPolicyResolver.java#L19) | เก็บ policy เป็น `Map<Role, BookingPolicy>` ไม่มี if-else |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/policy/BookingPolicyResolver.java:23`](../code/backend/src/main/java/com/example/cp_room_booking/service/policy/BookingPolicyResolver.java#L23) | สร้าง map จาก `supportedRoles()` ของทุก policy ที่ Spring inject มา |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/NotificationServiceImpl.java:36`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/NotificationServiceImpl.java#L36) | รับ `List<NotificationSender>` เพิ่มช่องทางใหม่ไม่ต้องแก้ class นี้ |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/NotificationServiceImpl.java:46`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/NotificationServiceImpl.java#L46) | วนส่งผ่านทุก sender |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/state/BookingStateFactory.java:16`](../code/backend/src/main/java/com/example/cp_room_booking/service/state/BookingStateFactory.java#L16) | รวม state ทุกตัวใน `EnumMap` เพิ่มสถานะ = เพิ่ม class |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/validation/BookingValidationChain.java:19`](../code/backend/src/main/java/com/example/cp_room_booking/service/validation/BookingValidationChain.java#L19) | ต่อ chain ด้วย `setNext()` เพิ่มกฎ = เพิ่ม handler |
+
 ---
 
 ## L — Liskov Substitution Principle
@@ -60,10 +84,22 @@
 > ใช้ subclass แทน superclass ได้โดยโปรแกรมยังถูกต้อง
 
 - **`BookingPolicy`**: `PolicyHandler` เรียก `maxDurationHours()`, `maxAdvanceDays()`, `maxActiveBookings()` โดยไม่สนว่าเป็น policy ของบทบาทไหน ทุก implementation คืนค่าตามสัญญาเดียวกัน (`StaffBookingPolicy` คืน `Integer.MAX_VALUE` แทน "ไม่จำกัด" แทนที่จะคืนค่าพิเศษที่ผู้เรียกต้องเช็ก)
-- **`BookingValidationHandler`**: chain เรียก `validate()` ของ handler ทุกตัวแบบเดียวกัน ทุก subclass ทำแค่ `check()` และไม่เปลี่ยนพฤติกรรมการส่งต่อ ลำดับ handler สลับได้โดยไม่พัง (ต่างกันแค่ประสิทธิภาพ)
+- **`BookingValidationHandler`**: chain เรียก `validate()` ของ handler ทุกตัวแบบเดียวกัน ทุก subclass ทำแค่ `check()` และไม่เปลี่ยนพฤติกรรมการส่งต่อ สลับลำดับ handler แล้วการจองที่ถูกต้องยังผ่านเหมือนเดิม แต่ถ้าคำขอผิดหลายกฎพร้อมกัน ข้อผิดพลาดที่ตอบกลับจะเปลี่ยนไปตามลำดับ (และจำนวน query ที่ต้องรันก่อนเจอข้อผิดพลาด) จึงเรียงให้ตรวจที่ไม่ต้องใช้ฐานข้อมูลก่อน
 - **`BookingState`**: state ทุกตัวสืบทอด `AbstractBookingState` และตอบคำถาม `canHandle` / `next` แบบเดียวกัน state สุดท้าย (`RejectedState`, `CancelledState`, `CompletedState`, `NoShowState`) คืน `false` / `Optional.empty()` ไม่โยน exception ที่ผู้เรียกไม่คาดคิด
 - **`NotificationSender`**: `NotificationServiceImpl` วน `senders.forEach(sender -> sender.send(message))` ใช้ sender ชนิดไหนก็ได้
 - **test ยืนยัน**: `BookingPolicyTest` ตรวจทุก policy ผ่าน interface เดียวกัน, `BookingStateTransitionTest` ตรวจทุก state ด้วยตารางเดียว 42 กรณี
+
+
+**หลักฐานในโค้ด** (เลขบรรทัดตาม `develop` @ `5100cf7`)
+
+| ไฟล์ : บรรทัด | สิ่งที่แสดง |
+|---|---|
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/policy/BookingPolicy.java:11`](../code/backend/src/main/java/com/example/cp_room_booking/service/policy/BookingPolicy.java#L11) | สัญญาเดียวที่ทุก policy ทำตาม |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/validation/PolicyHandler.java:31`](../code/backend/src/main/java/com/example/cp_room_booking/service/validation/PolicyHandler.java#L31) | ผู้เรียกใช้ `maxDurationHours()` โดยไม่สนว่าเป็น policy ไหน |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/policy/StaffBookingPolicy.java:31`](../code/backend/src/main/java/com/example/cp_room_booking/service/policy/StaffBookingPolicy.java#L31) | คืน `Integer.MAX_VALUE` แทน "ไม่จำกัด" ยังเป็น int ตามสัญญา |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/state/AbstractBookingState.java:28`](../code/backend/src/main/java/com/example/cp_room_booking/service/state/AbstractBookingState.java#L28) | `canHandle()` ใช้ร่วมกันทุกสถานะ |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/state/AbstractBookingState.java:33`](../code/backend/src/main/java/com/example/cp_room_booking/service/state/AbstractBookingState.java#L33) | `next()` คืน `Optional` ไม่โยน exception ที่ผู้เรียกไม่คาดคิด |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/state/RejectedState.java:15`](../code/backend/src/main/java/com/example/cp_room_booking/service/state/RejectedState.java#L15) | สถานะสุดท้ายใช้ตารางว่าง (`Map.of()`) แทนการ override ให้โยน error |
 
 ---
 
@@ -87,6 +123,19 @@
 
 **จุดที่ยังปรับได้:** `BookingRepository` มี query หลายเรื่อง (ตรวจเวลาชน, ตาราง, ล็อก, ค้นหา) เพราะเป็น repository ของ Spring Data ที่ผูกกับ entity เดียว ถ้าใหญ่ขึ้นอีกอาจแยกเป็น repository ย่อยตามงาน แบบที่ทำกับ `BookingLifecycleRepository`
 
+
+**หลักฐานในโค้ด** (เลขบรรทัดตาม `develop` @ `5100cf7`)
+
+| ไฟล์ : บรรทัด | สิ่งที่แสดง |
+|---|---|
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/RoomQueryService.java:11`](../code/backend/src/main/java/com/example/cp_room_booking/service/RoomQueryService.java#L11) | interface ของโมดูลห้องที่เปิดให้โมดูลการจองใช้ มี 3 method |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/validation/RoomHandler.java:16`](../code/backend/src/main/java/com/example/cp_room_booking/service/validation/RoomHandler.java#L16) | handler พึ่ง `RoomQueryService` ไม่ใช่ `RoomService` ทั้งก้อน |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/validation/ClosureHandler.java:15`](../code/backend/src/main/java/com/example/cp_room_booking/service/validation/ClosureHandler.java#L15) | ใช้แค่ `isClosed()` |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/BookingQueryService.java:10`](../code/backend/src/main/java/com/example/cp_room_booking/service/BookingQueryService.java#L10) | interface ของโมดูลการจองที่เปิดให้โมดูลห้องใช้ มี 3 method |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/RoomServiceImpl.java:94`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/RoomServiceImpl.java#L94) | ค้นหาห้องว่างด้วย `findBookedRoomIds()` |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/RoomServiceImpl.java:147`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/RoomServiceImpl.java#L147) | ลบห้องตรวจ `hasFutureBookings()` |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/RoomClosureServiceImpl.java:51`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/RoomClosureServiceImpl.java#L51) | สร้างช่วงปิดตรวจ `hasActiveBookingOverlap()` |
+
 ---
 
 ## D — Dependency Inversion Principle
@@ -101,6 +150,19 @@
 - **Constructor injection ทั้งหมด**: field เป็น `private final` + `@RequiredArgsConstructor` ทำให้ dependency ชัดและ unit test สร้าง object ด้วย mock ได้เลย เช่น `new BookingLifecycleServiceImpl(bookingRepository, lifecycleRepository, ..., clock)`
 
 **จุดที่ยังปรับได้:** `InAppNotificationSender` (โมดูลแจ้งเตือน) ใช้ `BookingRepository.getReferenceById` ของโมดูลการจองโดยตรงเพื่อผูก `notification.booking` เป็นการพึ่งข้ามโมดูลจุดเดียวที่เหลือ ยอมรับได้เพราะใช้แค่สร้าง reference ไม่ query ข้อมูล แต่ถ้าจะให้สะอาดขึ้นควรผ่าน `BookingQueryService`
+
+
+**หลักฐานในโค้ด** (เลขบรรทัดตาม `develop` @ `5100cf7`)
+
+| ไฟล์ : บรรทัด | สิ่งที่แสดง |
+|---|---|
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/BookingServiceImpl.java:42`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/BookingServiceImpl.java#L42) | `@RequiredArgsConstructor` = constructor injection |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/BookingServiceImpl.java:47`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/BookingServiceImpl.java#L47) | พึ่ง interface `RoomQueryService` |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/BookingServiceImpl.java:51`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/BookingServiceImpl.java#L51) | รับ `Clock` แทนการเรียก `LocalDateTime.now()` ตรง ๆ |
+| [`code/backend/src/main/java/com/example/cp_room_booking/config/ClockConfig.java:17`](../code/backend/src/main/java/com/example/cp_room_booking/config/ClockConfig.java#L17) | สร้าง `Clock` bean ที่เดียว test ใส่เวลาคงที่แทนได้ |
+| [`code/backend/src/main/java/com/example/cp_room_booking/controller/api/BookingController.java:42`](../code/backend/src/main/java/com/example/cp_room_booking/controller/api/BookingController.java#L42) | Controller พึ่ง interface `BookingService` |
+| [`code/backend/src/main/java/com/example/cp_room_booking/service/impl/BookingServiceImpl.java:70`](../code/backend/src/main/java/com/example/cp_room_booking/service/impl/BookingServiceImpl.java#L70) | publish event ผ่าน `ApplicationEventPublisher` ไม่เรียกโมดูลแจ้งเตือนตรง |
+| [`code/backend/src/main/java/com/example/cp_room_booking/event/NotificationListener.java:46`](../code/backend/src/main/java/com/example/cp_room_booking/event/NotificationListener.java#L46) | ผู้ฟัง event ทำงานหลัง commit |
 
 ---
 
